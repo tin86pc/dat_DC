@@ -9,6 +9,7 @@
     .disconnected { background: #fee; color: #c00; }
     .connected { background: #efe; color: #060; }
     button { padding: 10px 20px; margin: 4px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
     #log { background: #f5f5f5; padding: 12px; height: 200px; overflow-y: auto; 
            font-family: monospace; font-size: 13px; border-radius: 4px; }
   </style>
@@ -19,6 +20,8 @@
   <div id="status" class="status disconnected">Chưa kết nối</div>
   
   <button id="btnConnect" onclick="connect()">Kết nối ESP32</button>
+  <button id="btnDisconnect" onclick="disconnect()" disabled>Ngắt kết nối</button>
+  <br>
   <button id="btnLedOn" onclick="sendCommand('LED_ON')" disabled>Bật LED</button>
   <button id="btnLedOff" onclick="sendCommand('LED_OFF')" disabled>Tắt LED</button>
   
@@ -26,10 +29,9 @@
   <div id="log"></div>
 
   <script>
-    // Nordic UART Service UUIDs
     const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-    const NUS_TX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Browser -> ESP
-    const NUS_RX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // ESP -> Browser
+    const NUS_TX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+    const NUS_RX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 
     let device = null;
     let txCharacteristic = null;
@@ -47,6 +49,8 @@
     function setConnected(connected) {
       statusEl.textContent = connected ? 'Đã kết nối' : 'Chưa kết nối';
       statusEl.className = 'status ' + (connected ? 'connected' : 'disconnected');
+      document.getElementById('btnConnect').disabled = connected;
+      document.getElementById('btnDisconnect').disabled = !connected;
       document.getElementById('btnLedOn').disabled = !connected;
       document.getElementById('btnLedOff').disabled = !connected;
     }
@@ -55,7 +59,6 @@
       try {
         log('Đang yêu cầu chọn thiết bị...');
         
-        // Yêu cầu người dùng chọn thiết bị BLE (lọc theo tên chứa "ESP32")
         device = await navigator.bluetooth.requestDevice({
           filters: [{ namePrefix: 'ESP32' }],
           optionalServices: [NUS_SERVICE_UUID]
@@ -63,30 +66,21 @@
 
         log(`Đã chọn: ${device.name}`);
 
-        // Kết nối GATT server
         const server = await device.gatt.connect();
         log('Đã kết nối GATT server');
 
-        // Lấy service NUS
         const service = await server.getPrimaryService(NUS_SERVICE_UUID);
-        log('Đã lấy service NUS');
-
-        // Lấy các characteristic
         txCharacteristic = await service.getCharacteristic(NUS_TX_CHAR_UUID);
         rxCharacteristic = await service.getCharacteristic(NUS_RX_CHAR_UUID);
 
-        // Lắng nghe dữ liệu từ ESP32 gửi lên
         await rxCharacteristic.startNotifications();
         rxCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
           const value = new TextDecoder().decode(event.target.value);
           log('ESP32 → ' + value.trim());
         });
 
-        // Xử lý ngắt kết nối
-        device.addEventListener('gattserverdisconnected', () => {
-          log('Thiết bị đã ngắt kết nối');
-          setConnected(false);
-        });
+        // Lắng nghe sự kiện ngắt kết nối (do ESP32 chủ động hoặc mất kết nối)
+        device.addEventListener('gattserverdisconnected', onDisconnected);
 
         setConnected(true);
         log('Sẵn sàng gửi lệnh!');
@@ -96,11 +90,32 @@
       }
     }
 
+    // Hàm xử lý khi mất kết nối
+    function onDisconnected() {
+      log('Thiết bị đã ngắt kết nối');
+      txCharacteristic = null;
+      rxCharacteristic = null;
+      setConnected(false);
+    }
+
+    // Ngắt kết nối chủ động từ trình duyệt
+    function disconnect() {
+      if (device && device.gatt.connected) {
+        log('Đang ngắt kết nối...');
+        device.gatt.disconnect();  // Sẽ kích hoạt sự kiện 'gattserverdisconnected'
+      } else {
+        log('Không có kết nối để ngắt');
+      }
+    }
+
     async function sendCommand(cmd) {
-      if (!txCharacteristic) return;
+      if (!txCharacteristic) {
+        log('Chưa kết nối, không thể gửi lệnh');
+        return;
+      }
       try {
         const encoder = new TextEncoder();
-        const data = encoder.encode(cmd + '\n');  // ESP32 đọc đến '\n'
+        const data = encoder.encode(cmd + '\n');
         await txCharacteristic.writeValue(data);
         log('Browser → ' + cmd);
       } catch (error) {
