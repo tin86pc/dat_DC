@@ -1,127 +1,665 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-  <meta charset="UTF-8">
-  <title>ESP32 Web Bluetooth Control</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>ESP32 WebBluetooth</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Ctext x='16' y='24' font-family='monospace' font-size='26' font-weight='bold' fill='%23ff0000' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+
   <style>
-    body { font-family: sans-serif; max-width: 500px; margin: 40px auto; }
-    .status { padding: 8px; border-radius: 4px; margin-bottom: 16px; }
-    .disconnected { background: #fee; color: #c00; }
-    .connected { background: #efe; color: #060; }
-    button { padding: 10px 20px; margin: 4px; cursor: pointer; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    #log { background: #f5f5f5; padding: 12px; height: 200px; overflow-y: auto; 
-           font-family: monospace; font-size: 13px; border-radius: 4px; }
+    :root {
+      --bg: #0a0c0f;
+      --bg2: #0f1318;
+      --bg3: #141a22;
+      --border: #1e2d3d;
+      --accent: #00d4ff;
+      --accent2: #00ff88;
+      --warn: #ffb300;
+      --error: #ff4757;
+      --dim: #3a4a5c;
+      --text: #c8d8e8;
+      --text-dim: #56707a;
+      --mono: "Share Tech Mono", monospace;
+      --display: "Rajdhani", sans-serif;
+      --glow: 0 0 calc(0.8 * 1dvmin) rgba(0, 212, 255, 0.4);
+      --glow2: 0 0 calc(0.8 * 1dvmin) rgba(0, 255, 136, 0.4);
+
+      --u: 2dvmin;
+      --fs-xs:  calc(1.6 * var(--u));
+      --fs-sm:  calc(1.9 * var(--u));
+      --fs-md:  calc(2.2 * var(--u));
+      --fs-lg:  calc(2.6 * var(--u));
+      --fs-xl:  calc(12 * var(--u));
+
+      --gap-sm: calc(0.8 * var(--u));
+      --gap-md: calc(1.2 * var(--u));
+      --gap-lg: calc(2 * var(--u));
+
+      --pad-sm: calc(0.8 * var(--u));
+      --pad-md: calc(1.5 * var(--u));
+      --pad-lg: calc(2.5 * var(--u));
+
+      --radius: calc(0.6 * var(--u));
+      --border-w: calc(0.12 * var(--u));
+
+      --h-log: calc(20 * var(--u));
+      --h-control-panel: calc(28 * var(--u));
+      --h-bar: calc(7 * var(--u));
+    }
+
+    @supports not (height: 1dvmin) {
+      :root { --u: 1vmin; }
+    }
+
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      overscroll-behavior: none;
+    }
+
+    #main {
+      width: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background-color: var(--bg);
+      border: var(--border-w) solid var(--border);
+    }
+
+    /* ============ STATUS BAR ============ */
+    #statusBar {
+      flex: 0 0 var(--h-bar);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 var(--pad-sm);
+      background: var(--bg3);
+      border-bottom: var(--border-w) solid var(--border);
+      font-family: var(--display);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+
+    #statusBar.disconnected {
+      color: var(--error);
+      text-shadow: 0 0 calc(0.8 * var(--u)) rgba(255, 71, 87, 0.4);
+    }
+
+    #statusBar.connected {
+      color: var(--accent2);
+      text-shadow: var(--glow2);
+    }
+
+    /* ============ LOG PANEL ============ */
+    #logPanel {
+      flex: 0 0 var(--h-log);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: flex-basis 0.25s ease;
+    }
+
+    #logPanel.expanded {
+      flex: 1 1 auto;
+    }
+
+    #logContent {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      color: var(--accent2);
+      background: var(--bg2);
+      font-family: var(--mono);
+      font-size: var(--fs-sm);
+      line-height: 1.45;
+      white-space: pre-wrap;
+      padding: var(--pad-sm);
+      word-break: break-word;
+    }
+
+    #logContent > div {
+      animation: fadeIn 0.15s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(calc(0.3 * var(--u))); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    #logControl,
+    #Controlbutton {
+      flex: 0 0 var(--h-bar);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--gap-sm);
+      padding: var(--pad-sm);
+      background: var(--bg3);
+      border-top: var(--border-w) solid var(--border);
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+
+    #logControl button,
+    #Controlbutton button,
+    #btnCmdSend {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 100%;
+      padding: 0 var(--pad-sm);
+      font-size: var(--fs-xs);
+      font-family: var(--display);
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--text-dim);
+      border: var(--border-w) solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #logControl button:hover,
+    #Controlbutton button:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      text-shadow: var(--glow);
+    }
+
+    #Controlbutton button:hover {
+      color: var(--accent2);
+      border-color: var(--accent2);
+      text-shadow: var(--glow2);
+    }
+
+    #logControl button:active,
+    #Controlbutton button:active,
+    #btnCmdSend:active {
+      transform: scale(0.96);
+    }
+
+    #btnConnect.connected {
+      color: var(--accent2);
+      border-color: var(--accent2);
+      text-shadow: var(--glow2);
+    }
+
+    #btnConnect.disconnected {
+      color: var(--warn);
+      border-color: var(--warn);
+      text-shadow: 0 0 calc(0.8 * var(--u)) rgba(255, 179, 0, 0.4);
+    }
+
+    /* ============ CONTROL PANEL ============ */
+    #ControlPanel {
+      flex: 0 0 var(--h-control-panel);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg2);
+    }
+
+    #ControlContent {
+      flex: 1 1 auto;
+      overflow: hidden;
+      color: var(--accent);
+      background: var(--bg2);
+      font-family: var(--mono);
+      font-size: var(--fs-xl);
+      line-height: 1;
+      text-shadow: var(--glow);
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+
+      outline: none;
+      cursor: text;
+      user-select: text;
+      padding: var(--pad-sm);
+      transition: text-shadow 0.2s;
+    }
+
+    #ControlContent:focus {
+      text-shadow: var(--glow2);
+    }
+
+    /* ============ CMD PANEL ============ */
+    #cmdPanel {
+      flex: 0 0 var(--h-bar);
+      display: flex;
+      align-items: center;
+      gap: var(--gap-sm);
+      padding: var(--pad-sm);
+      background: var(--bg3);
+      border-top: var(--border-w) solid var(--border);
+    }
+
+    #cmdInput {
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 100%;
+      background: var(--bg2);
+      border: var(--border-w) solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0 var(--pad-md);
+      font-family: var(--mono);
+      font-size: var(--fs-md);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #cmdInput:focus {
+      border-color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    #cmdInput::placeholder {
+      color: var(--text-dim);
+    }
+
+    #btnCmdSend {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: calc(12 * var(--u));
+      padding: 0 var(--pad-md);
+    }
+
+    #btnCmdSend:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      text-shadow: var(--glow);
+    }
+
+    /* ============ SCROLLBAR ============ */
+    #logContent::-webkit-scrollbar { width: calc(0.8 * var(--u)); }
+    #logContent::-webkit-scrollbar-track { background: var(--bg2); }
+    #logContent::-webkit-scrollbar-thumb {
+      background: var(--dim);
+      border-radius: var(--radius);
+    }
+    #logContent::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ============ LANDSCAPE THẤP ============ */
+    @media (orientation: landscape) and (max-height: 500px) {
+      :root {
+        --u: 1.1vmin;
+        --h-log: calc(30 * var(--u));
+        --h-control-panel: calc(40 * var(--u));
+        --h-bar: calc(10 * var(--u));
+        --fs-xl: calc(18 * var(--u));
+      }
+    }
   </style>
 </head>
+
 <body>
-  <h1>ESP32 Web Bluetooth</h1>
-  
-  <div id="status" class="status disconnected">Chưa kết nối</div>
-  
-  <button id="btnConnect" onclick="connect()">Kết nối ESP32</button>
-  <button id="btnDisconnect" onclick="disconnect()" disabled>Ngắt kết nối</button>
-  <br>
-  <button id="btnLedOn" onclick="sendCommand('LED_ON')" disabled>Bật LED</button>
-  <button id="btnLedOff" onclick="sendCommand('LED_OFF')" disabled>Tắt LED</button>
-  
-  <h3>Nhật ký:</h3>
-  <div id="log"></div>
+  <div id="main">
+
+    <div id="statusBar" class="disconnected">⚫ Chưa kết nối</div>
+
+    <div id="logPanel">
+      <div id="logContent"></div>
+      <div id="logControl">
+        <button id="btnConnect" class="disconnected">🔗 Kết nối</button>
+        <button id="btnClearLog">🗑 Xóa</button>
+        <button id="btnSaveText">💾 Lưu</button>
+        <button id="btnExpand">▲ Mở</button>
+      </div>
+    </div>
+
+    <div id="ControlPanel">
+      <div id="ControlContent" contenteditable="true" inputmode="numeric">1</div>
+      <div id="Controlbutton">
+        <button id="btnIncrease">▲ Tăng</button>
+        <button id="btnDecrease">▼ Giảm</button>
+        <button id="btnWrite">💾 Ghi</button>
+        <button id="btnRead">▶ Đọc</button>
+      </div>
+    </div>
+
+    <div id="cmdPanel">
+      <input id="cmdInput" type="text" placeholder="Nhập lệnh... (vd: help, info, heap, read)" autocomplete="off" />
+      <button id="btnCmdSend">▶ Gửi</button>
+    </div>
+
+  </div>
 
   <script>
+    /* ==================== LOG ==================== */
+    const logs = [];
+    const MAX_LOG = 500;
+    const logContent = document.getElementById("logContent");
+
+    function addLog(...args) {
+      const time = new Date().toLocaleTimeString();
+      const text = `[${time}] ${args.join(' ')}`;
+      logs.push(text);
+      if (logs.length > MAX_LOG) logs.shift();
+
+      const autoScroll =
+        logContent.scrollTop + logContent.clientHeight >=
+        logContent.scrollHeight - 5;
+
+      const line = document.createElement("div");
+      line.textContent = text;
+      logContent.appendChild(line);
+
+      while (logContent.children.length > MAX_LOG) {
+        logContent.removeChild(logContent.firstChild);
+      }
+
+      if (autoScroll) logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    window.addEventListener('load', () => {
+      addLog('Web Bluetooth sẵn sàng. Nhấn "Kết nối" để bắt đầu.');
+      if (!navigator.bluetooth) {
+        addLog('⚠ Trình duyệt không hỗ trợ Web Bluetooth!');
+        addLog('→ Dùng Chrome/Edge/Opera trên desktop hoặc Android.');
+      }
+    });
+
+    /* ==================== SAVE / CLEAR / EXPAND LOG ==================== */
+    document.getElementById("btnSaveText").addEventListener("click", () => {
+      const blob = new Blob([logs.join("\r\n")], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date();
+      a.download =
+        `Log_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}.txt`;
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      addLog('Lưu log ra file ' + a.download);
+    });
+
+    document.getElementById("btnClearLog").addEventListener("click", () => {
+      logs.length = 0;
+      logContent.replaceChildren();
+      addLog('Xóa log');
+    });
+
+    document.getElementById("btnExpand").addEventListener("click", () => {
+      const panel = document.getElementById("logPanel");
+      const btn = document.getElementById("btnExpand");
+      panel.classList.toggle("expanded");
+      btn.textContent = panel.classList.contains("expanded") ? "▼ Thu" : "▲ Mở";
+      logContent.scrollTop = logContent.scrollHeight;
+    });
+
+    /* ==================== WEB BLUETOOTH ==================== */
     const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-    const NUS_TX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
-    const NUS_RX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+    const NUS_TX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // browser -> ESP32
+    const NUS_RX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // ESP32 -> browser
 
     let device = null;
-    let txCharacteristic = null;
-    let rxCharacteristic = null;
+    let txChar = null;
+    let rxChar = null;
+    let rxBuffer = '';
 
-    const logEl = document.getElementById('log');
-    const statusEl = document.getElementById('status');
-
-    function log(msg) {
-      const time = new Date().toLocaleTimeString();
-      logEl.innerHTML += `[${time}] ${msg}<br>`;
-      logEl.scrollTop = logEl.scrollHeight;
-    }
+    const statusBar = document.getElementById('statusBar');
+    const btnConnect = document.getElementById('btnConnect');
 
     function setConnected(connected) {
-      statusEl.textContent = connected ? 'Đã kết nối' : 'Chưa kết nối';
-      statusEl.className = 'status ' + (connected ? 'connected' : 'disconnected');
-      document.getElementById('btnConnect').disabled = connected;
-      document.getElementById('btnDisconnect').disabled = !connected;
-      document.getElementById('btnLedOn').disabled = !connected;
-      document.getElementById('btnLedOff').disabled = !connected;
+      statusBar.textContent = connected ? '🟢 Đã kết nối' : '⚫ Chưa kết nối';
+      statusBar.className = connected ? 'connected' : 'disconnected';
+      btnConnect.textContent = connected ? '🔌 Ngắt kết nối' : '🔗 Kết nối';
+      btnConnect.className = connected ? 'connected' : 'disconnected';
     }
 
-    async function connect() {
+    async function connectBLE() {
+      if (!navigator.bluetooth) {
+        alert('Trình duyệt không hỗ trợ Web Bluetooth. Dùng Chrome/Edge/Opera.');
+        return;
+      }
+
       try {
-        log('Đang yêu cầu chọn thiết bị...');
-        
+        addLog('Đang mở hộp thoại chọn thiết bị...');
+
         device = await navigator.bluetooth.requestDevice({
           filters: [{ namePrefix: 'ESP32' }],
           optionalServices: [NUS_SERVICE_UUID]
         });
 
-        log(`Đã chọn: ${device.name}`);
+        addLog('Đã chọn: ' + device.name);
 
         const server = await device.gatt.connect();
-        log('Đã kết nối GATT server');
+        addLog('Đã kết nối GATT server');
 
         const service = await server.getPrimaryService(NUS_SERVICE_UUID);
-        txCharacteristic = await service.getCharacteristic(NUS_TX_CHAR_UUID);
-        rxCharacteristic = await service.getCharacteristic(NUS_RX_CHAR_UUID);
+        txChar = await service.getCharacteristic(NUS_TX_CHAR_UUID);
+        rxChar = await service.getCharacteristic(NUS_RX_CHAR_UUID);
 
-        await rxCharacteristic.startNotifications();
-        rxCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
-          const value = new TextDecoder().decode(event.target.value);
-          log('ESP32 → ' + value.trim());
-        });
+        await rxChar.startNotifications();
+        rxChar.addEventListener('characteristicvaluechanged', onNotify);
 
-        // Lắng nghe sự kiện ngắt kết nối (do ESP32 chủ động hoặc mất kết nối)
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
         setConnected(true);
-        log('Sẵn sàng gửi lệnh!');
-      } catch (error) {
-        log('Lỗi: ' + error.message);
-        console.error(error);
+        addLog('✓ Kết nối thành công. Sẵn sàng gửi lệnh!');
+      } catch (err) {
+        if (err.name === 'NotFoundError') {
+          addLog('Đã hủy chọn thiết bị');
+        } else {
+          addLog('✗ Lỗi kết nối: ' + err.message);
+        }
       }
     }
 
-    // Hàm xử lý khi mất kết nối
+    function disconnectBLE() {
+      if (device && device.gatt.connected) {
+        device.gatt.disconnect();
+      } else {
+        addLog('Không có kết nối để ngắt');
+      }
+    }
+
     function onDisconnected() {
-      log('Thiết bị đã ngắt kết nối');
-      txCharacteristic = null;
-      rxCharacteristic = null;
+      addLog('⚫ Thiết bị đã ngắt kết nối');
+      txChar = null;
+      rxChar = null;
+      rxBuffer = '';
       setConnected(false);
     }
 
-    // Ngắt kết nối chủ động từ trình duyệt
-    function disconnect() {
-      if (device && device.gatt.connected) {
-        log('Đang ngắt kết nối...');
-        device.gatt.disconnect();  // Sẽ kích hoạt sự kiện 'gattserverdisconnected'
-      } else {
-        log('Không có kết nối để ngắt');
+    function onNotify(event) {
+      const chunk = new TextDecoder().decode(event.target.value);
+      rxBuffer += chunk;
+
+      let idx;
+      while ((idx = rxBuffer.indexOf('\n')) >= 0) {
+        const line = rxBuffer.slice(0, idx).replace(/\r$/, '').trim();
+        rxBuffer = rxBuffer.slice(idx + 1);
+        if (line) handleLineFromESP32(line);
       }
     }
 
-    async function sendCommand(cmd) {
-      if (!txCharacteristic) {
-        log('Chưa kết nối, không thể gửi lệnh');
-        return;
+    function handleLineFromESP32(line) {
+      // Thử parse JSON trước (nếu ESP32 gửi JSON)
+      try {
+        const data = JSON.parse(line);
+        if (data && data.type) {
+          handleJSONMessage(data);
+          return;
+        }
+      } catch { /* không phải JSON */ }
+
+      addLog('ESP32: ' + line);
+
+      // Nếu ESP32 gửi số thuần, cập nhật ControlContent
+      if (/^\d+$/.test(line)) {
+        controlContent.textContent = line;
+      }
+    }
+
+    function handleJSONMessage(data) {
+      switch (data.type) {
+        case 'status':
+          addLog('Đã kết nối với ESP32');
+          break;
+
+        case 'log':
+          addLog(data.msg || '');
+          break;
+
+        case 'value':
+          controlContent.textContent = data.value;
+          break;
+
+        case 'error':
+          addLog('✗ Lỗi: ' + (data.msg || ''));
+          break;
+
+        default:
+          addLog('ESP32: ' + JSON.stringify(data));
+      }
+    }
+
+    async function sendRaw(text) {
+      if (!txChar) {
+        addLog('Chưa kết nối, không gửi được');
+        return false;
       }
       try {
         const encoder = new TextEncoder();
-        const data = encoder.encode(cmd + '\n');
-        await txCharacteristic.writeValue(data);
-        log('Browser → ' + cmd);
-      } catch (error) {
-        log('Lỗi gửi: ' + error.message);
+        const payload = text.endsWith('\n') ? text : text + '\n';
+        await txChar.writeValue(encoder.encode(payload));
+        return true;
+      } catch (err) {
+        addLog('Lỗi gửi: ' + err.message);
+        return false;
       }
     }
+
+    // sendCommand('write', {value: 77}) → gửi "write 77\n"
+    function sendCommand(cmd, params = null) {
+      let line = cmd;
+      if (params && typeof params === 'object') {
+        const parts = Object.values(params).map(v => String(v));
+        if (parts.length) line = cmd + ' ' + parts.join(' ');
+      }
+      sendRaw(line);
+      addLog('→ ' + line);
+    }
+
+    /* ==================== NÚT KẾT NỐI ==================== */
+    btnConnect.addEventListener('click', () => {
+      if (device && device.gatt.connected) {
+        disconnectBLE();
+      } else {
+        connectBLE();
+      }
+    });
+
+    /* ==================== CONTROL ==================== */
+    const controlContent = document.getElementById('ControlContent');
+    const MIN_VAL = 1;
+    const MAX_VAL = 128;
+
+    document.getElementById('btnIncrease').addEventListener('click', () => {
+      let v = parseInt(controlContent.textContent, 10);
+      if (isNaN(v)) v = MIN_VAL;
+      v = Math.min(v + 1, MAX_VAL);
+      controlContent.textContent = v;
+    });
+
+    document.getElementById('btnDecrease').addEventListener('click', () => {
+      let v = parseInt(controlContent.textContent, 10);
+      if (isNaN(v)) v = MIN_VAL;
+      v = Math.max(v - 1, MIN_VAL);
+      controlContent.textContent = v;
+    });
+
+    document.getElementById('btnRead').addEventListener('click', () => sendCommand('read'));
+
+    document.getElementById('btnWrite').addEventListener('click', () => {
+      const v = parseInt(controlContent.textContent, 10);
+      if (isNaN(v)) return;
+      sendCommand('write', { value: v });
+    });
+
+    /* ==================== INPUT VALIDATION ==================== */
+    controlContent.addEventListener('keydown', (e) => {
+      const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End'];
+      if (allowedKeys.includes(e.key)) {
+        if (e.key === 'Enter') { e.preventDefault(); controlContent.blur(); }
+        return;
+      }
+      if (!/^[0-9]$/.test(e.key)) { e.preventDefault(); return; }
+
+      const sel = window.getSelection();
+      const currentText = controlContent.textContent;
+      const cursorPos = sel.anchorOffset;
+      const newText = currentText.slice(0, cursorPos) + e.key + currentText.slice(cursorPos);
+      const newValue = parseInt(newText, 10);
+      if (!isNaN(newValue) && newValue > MAX_VAL) e.preventDefault();
+    });
+
+    controlContent.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      const digitsOnly = text.replace(/[^0-9]/g, '');
+      document.execCommand('insertText', false, digitsOnly);
+    });
+
+    controlContent.addEventListener('blur', () => {
+      let value = parseInt(controlContent.textContent, 10);
+      if (isNaN(value)) value = MIN_VAL;
+      value = Math.max(MIN_VAL, Math.min(MAX_VAL, value));
+      controlContent.textContent = value;
+    });
+
+    /* ==================== CMD INPUT ==================== */
+    const cmdInput = document.getElementById('cmdInput');
+
+    function sendCmdFromInput() {
+      const cmd = cmdInput.value.trim();
+      if (!cmd) return;
+
+      if (cmd.toLowerCase().startsWith('write ')) {
+        const v = parseInt(cmd.substring(6), 10);
+        if (!isNaN(v)) {
+          sendCommand('write', { value: v });
+          cmdInput.value = '';
+          return;
+        }
+      }
+      sendCommand(cmd);
+      cmdInput.value = '';
+    }
+
+    document.getElementById('btnCmdSend').addEventListener('click', sendCmdFromInput);
+    cmdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendCmdFromInput(); }
+    });
   </script>
 </body>
+
 </html>
