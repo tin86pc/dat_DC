@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ESP32 WebBluetooth</title>
 
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Ctext x='16' y='24' font-family='monospace' font-size='26' font-weight='bold' fill='%23ff0000' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Ctext x='16' y='24' font-family='monospace' font-size='26' font-weight='bold' fill='%23ff0000' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
 
   <style>
     :root {
@@ -27,11 +28,11 @@
       --glow2: 0 0 calc(0.8 * 1dvmin) rgba(0, 255, 136, 0.4);
 
       --u: 2dvmin;
-      --fs-xs:  calc(1.6 * var(--u));
-      --fs-sm:  calc(1.9 * var(--u));
-      --fs-md:  calc(2.2 * var(--u));
-      --fs-lg:  calc(2.6 * var(--u));
-      --fs-xl:  calc(12 * var(--u));
+      --fs-xs: calc(1.6 * var(--u));
+      --fs-sm: calc(1.9 * var(--u));
+      --fs-md: calc(2.2 * var(--u));
+      --fs-lg: calc(2.6 * var(--u));
+      --fs-xl: calc(12 * var(--u));
 
       --gap-sm: calc(0.8 * var(--u));
       --gap-md: calc(1.2 * var(--u));
@@ -50,7 +51,9 @@
     }
 
     @supports not (height: 1dvmin) {
-      :root { --u: 1vmin; }
+      :root {
+        --u: 1vmin;
+      }
     }
 
     * {
@@ -60,7 +63,8 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
+    html,
+    body {
       width: 100%;
       height: 100%;
       height: 100dvh;
@@ -135,13 +139,20 @@
       word-break: break-word;
     }
 
-    #logContent > div {
+    #logContent>div {
       animation: fadeIn 0.15s ease;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(calc(0.3 * var(--u))); }
-      to   { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(calc(0.3 * var(--u)));
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     #logControl,
@@ -296,13 +307,22 @@
     }
 
     /* ============ SCROLLBAR ============ */
-    #logContent::-webkit-scrollbar { width: calc(0.8 * var(--u)); }
-    #logContent::-webkit-scrollbar-track { background: var(--bg2); }
+    #logContent::-webkit-scrollbar {
+      width: calc(0.8 * var(--u));
+    }
+
+    #logContent::-webkit-scrollbar-track {
+      background: var(--bg2);
+    }
+
     #logContent::-webkit-scrollbar-thumb {
       background: var(--dim);
       border-radius: var(--radius);
     }
-    #logContent::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    #logContent::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
 
     /* ============ LANDSCAPE THẤP ============ */
     @media (orientation: landscape) and (max-height: 500px) {
@@ -343,7 +363,7 @@
     </div>
 
     <div id="cmdPanel">
-      <input id="cmdInput" type="text" placeholder="Nhập lệnh... (vd: help, info, heap, read)" autocomplete="off" />
+      <input id="cmdInput" type="text" placeholder="Nhập lệnh... " autocomplete="off" />
       <button id="btnCmdSend">▶ Gửi</button>
     </div>
 
@@ -382,36 +402,6 @@
         addLog('⚠ Trình duyệt không hỗ trợ Web Bluetooth!');
         addLog('→ Dùng Chrome/Edge/Opera trên desktop hoặc Android.');
       }
-    });
-
-    /* ==================== SAVE / CLEAR / EXPAND LOG ==================== */
-    document.getElementById("btnSaveText").addEventListener("click", () => {
-      const blob = new Blob([logs.join("\r\n")], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const now = new Date();
-      a.download =
-        `Log_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}.txt`;
-      a.href = url;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      addLog('Lưu log ra file ' + a.download);
-    });
-
-    document.getElementById("btnClearLog").addEventListener("click", () => {
-      logs.length = 0;
-      logContent.replaceChildren();
-      addLog('Xóa log');
-    });
-
-    document.getElementById("btnExpand").addEventListener("click", () => {
-      const panel = document.getElementById("logPanel");
-      const btn = document.getElementById("btnExpand");
-      panel.classList.toggle("expanded");
-      btn.textContent = panel.classList.contains("expanded") ? "▼ Thu" : "▲ Mở";
-      logContent.scrollTop = logContent.scrollHeight;
     });
 
     /* ==================== WEB BLUETOOTH ==================== */
@@ -488,6 +478,15 @@
       rxBuffer = '';
       setConnected(false);
     }
+    /* ==================== NÚT KẾT NỐI ==================== */
+    btnConnect.addEventListener('click', () => {
+      if (device && device.gatt.connected) {
+        disconnectBLE();
+      } else {
+        connectBLE();
+      }
+    });
+
 
     function onNotify(event) {
       const chunk = new TextDecoder().decode(event.target.value);
@@ -497,12 +496,14 @@
       while ((idx = rxBuffer.indexOf('\n')) >= 0) {
         const line = rxBuffer.slice(0, idx).replace(/\r$/, '').trim();
         rxBuffer = rxBuffer.slice(idx + 1);
-        if (line) handleLineFromESP32(line);
+        if (line) {
+          addLog('ESP32: ' + line);
+          XuLyDuLieuNhanDuoc(line);
+        }
       }
     }
 
-    function handleLineFromESP32(line) {
-      addLog('ESP32: ' + line);
+    function XuLyDuLieuNhanDuoc(line) {
 
       // Nếu ESP32 gửi số thuần, cập nhật ControlContent
       if (/^\d+$/.test(line)) {
@@ -510,12 +511,13 @@
       }
     }
 
-    async function sendRaw(text) {
+    async function sendtext(text) {
       if (!txChar) {
         addLog('Chưa kết nối, không gửi được');
         return false;
       }
       try {
+        addLog('→ ' + text);
         const encoder = new TextEncoder();
         const payload = text.endsWith('\n') ? text : text + '\n';
         await txChar.writeValue(encoder.encode(payload));
@@ -526,27 +528,36 @@
       }
     }
 
-    // sendCommand('write', {value: 77}) → gửi "write 77\n"
-    function sendCommand(cmd, params = null) {
-      let line = cmd;
-      if (params && typeof params === 'object') {
-        const parts = Object.values(params).map(v => String(v));
-        if (parts.length) line = cmd + ' ' + parts.join(' ');
-      }
-      sendRaw(line);
-      addLog('→ ' + line);
-    }
-
-    /* ==================== NÚT KẾT NỐI ==================== */
-    btnConnect.addEventListener('click', () => {
-      if (device && device.gatt.connected) {
-        disconnectBLE();
-      } else {
-        connectBLE();
-      }
+    /* ==================== CONTROL ==================== */
+    document.getElementById("btnSaveText").addEventListener("click", () => {
+      const blob = new Blob([logs.join("\r\n")], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date();
+      a.download =
+        `Log_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}.txt`;
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      addLog('Lưu log ra file ' + a.download);
     });
 
-    /* ==================== CONTROL ==================== */
+    document.getElementById("btnClearLog").addEventListener("click", () => {
+      logs.length = 0;
+      logContent.replaceChildren();
+      addLog('Xóa log');
+    });
+
+    document.getElementById("btnExpand").addEventListener("click", () => {
+      const panel = document.getElementById("logPanel");
+      const btn = document.getElementById("btnExpand");
+      panel.classList.toggle("expanded");
+      btn.textContent = panel.classList.contains("expanded") ? "▼ Thu" : "▲ Mở";
+      logContent.scrollTop = logContent.scrollHeight;
+    });
+
     const controlContent = document.getElementById('ControlContent');
     const MIN_VAL = 1;
     const MAX_VAL = 128;
@@ -565,12 +576,12 @@
       controlContent.textContent = v;
     });
 
-    document.getElementById('btnRead').addEventListener('click', () => sendCommand('read'));
+    document.getElementById('btnRead').addEventListener('click', () => sendtext('read'));
 
     document.getElementById('btnWrite').addEventListener('click', () => {
       const v = parseInt(controlContent.textContent, 10);
       if (isNaN(v)) return;
-      sendCommand('write', { value: v });
+      sendtext('write ' + v.toString());
     });
 
     /* ==================== INPUT VALIDATION ==================== */
@@ -610,22 +621,17 @@
     function sendCmdFromInput() {
       const cmd = cmdInput.value.trim();
       if (!cmd) return;
-
-      if (cmd.toLowerCase().startsWith('write ')) {
-        const v = parseInt(cmd.substring(6), 10);
-        if (!isNaN(v)) {
-          sendCommand('write', { value: v });
-          cmdInput.value = '';
-          return;
-        }
-      }
-      sendCommand(cmd);
+      sendtext(cmd);
       cmdInput.value = '';
     }
 
     document.getElementById('btnCmdSend').addEventListener('click', sendCmdFromInput);
+
     cmdInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); sendCmdFromInput(); }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendCmdFromInput();
+      }
     });
   </script>
 </body>
