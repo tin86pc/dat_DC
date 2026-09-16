@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>ESP32 Web Bluetooth Control</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 40px auto; }
+    .status { padding: 8px; border-radius: 4px; margin-bottom: 16px; }
+    .disconnected { background: #fee; color: #c00; }
+    .connected { background: #efe; color: #060; }
+    button { padding: 10px 20px; margin: 4px; cursor: pointer; }
+    #log { background: #f5f5f5; padding: 12px; height: 200px; overflow-y: auto; 
+           font-family: monospace; font-size: 13px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>ESP32 Web Bluetooth</h1>
+  
+  <div id="status" class="status disconnected">Chưa kết nối</div>
+  
+  <button id="btnConnect" onclick="connect()">Kết nối ESP32</button>
+  <button id="btnLedOn" onclick="sendCommand('LED_ON')" disabled>Bật LED</button>
+  <button id="btnLedOff" onclick="sendCommand('LED_OFF')" disabled>Tắt LED</button>
+  
+  <h3>Nhật ký:</h3>
+  <div id="log"></div>
+
+  <script>
+    // Nordic UART Service UUIDs
+    const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const NUS_TX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Browser -> ESP
+    const NUS_RX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // ESP -> Browser
+
+    let device = null;
+    let txCharacteristic = null;
+    let rxCharacteristic = null;
+
+    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('status');
+
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      logEl.innerHTML += `[${time}] ${msg}<br>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setConnected(connected) {
+      statusEl.textContent = connected ? 'Đã kết nối' : 'Chưa kết nối';
+      statusEl.className = 'status ' + (connected ? 'connected' : 'disconnected');
+      document.getElementById('btnLedOn').disabled = !connected;
+      document.getElementById('btnLedOff').disabled = !connected;
+    }
+
+    async function connect() {
+      try {
+        log('Đang yêu cầu chọn thiết bị...');
+        
+        // Yêu cầu người dùng chọn thiết bị BLE (lọc theo tên chứa "ESP32")
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: 'ESP32' }],
+          optionalServices: [NUS_SERVICE_UUID]
+        });
+
+        log(`Đã chọn: ${device.name}`);
+
+        // Kết nối GATT server
+        const server = await device.gatt.connect();
+        log('Đã kết nối GATT server');
+
+        // Lấy service NUS
+        const service = await server.getPrimaryService(NUS_SERVICE_UUID);
+        log('Đã lấy service NUS');
+
+        // Lấy các characteristic
+        txCharacteristic = await service.getCharacteristic(NUS_TX_CHAR_UUID);
+        rxCharacteristic = await service.getCharacteristic(NUS_RX_CHAR_UUID);
+
+        // Lắng nghe dữ liệu từ ESP32 gửi lên
+        await rxCharacteristic.startNotifications();
+        rxCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+          const value = new TextDecoder().decode(event.target.value);
+          log('ESP32 → ' + value.trim());
+        });
+
+        // Xử lý ngắt kết nối
+        device.addEventListener('gattserverdisconnected', () => {
+          log('Thiết bị đã ngắt kết nối');
+          setConnected(false);
+        });
+
+        setConnected(true);
+        log('Sẵn sàng gửi lệnh!');
+      } catch (error) {
+        log('Lỗi: ' + error.message);
+        console.error(error);
+      }
+    }
+
+    async function sendCommand(cmd) {
+      if (!txCharacteristic) return;
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(cmd + '\n');  // ESP32 đọc đến '\n'
+        await txCharacteristic.writeValue(data);
+        log('Browser → ' + cmd);
+      } catch (error) {
+        log('Lỗi gửi: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
