@@ -502,43 +502,11 @@
     }
 
     function handleLineFromESP32(line) {
-      // Thử parse JSON trước (nếu ESP32 gửi JSON)
-      try {
-        const data = JSON.parse(line);
-        if (data && data.type) {
-          handleJSONMessage(data);
-          return;
-        }
-      } catch { /* không phải JSON */ }
-
       addLog('ESP32: ' + line);
 
       // Nếu ESP32 gửi số thuần, cập nhật ControlContent
       if (/^\d+$/.test(line)) {
         controlContent.textContent = line;
-      }
-    }
-
-    function handleJSONMessage(data) {
-      switch (data.type) {
-        case 'status':
-          addLog('Đã kết nối với ESP32');
-          break;
-
-        case 'log':
-          addLog(data.msg || '');
-          break;
-
-        case 'value':
-          controlContent.textContent = data.value;
-          break;
-
-        case 'error':
-          addLog('✗ Lỗi: ' + (data.msg || ''));
-          break;
-
-        default:
-          addLog('ESP32: ' + JSON.stringify(data));
       }
     }
 
