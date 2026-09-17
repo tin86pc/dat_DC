@@ -561,27 +561,32 @@
     const controlContent = document.getElementById('ControlContent');
     const MIN_VAL = 1;
     const MAX_VAL = 128;
+    let dc = 1;
 
     document.getElementById('btnIncrease').addEventListener('click', () => {
-      let v = parseInt(controlContent.textContent, 10);
-      if (isNaN(v)) v = MIN_VAL;
-      v = Math.min(v + 1, MAX_VAL);
-      controlContent.textContent = v;
+      // let v = parseInt(controlContent.textContent, 10);
+      // if (isNaN(v)) v = MIN_VAL;
+      // v = Math.min(v + 1, MAX_VAL);
+
+      dc = dc + 1;
+      if (dc > MAX_VAL) dc = MIN_VAL;
+      controlContent.textContent = dc;
     });
 
     document.getElementById('btnDecrease').addEventListener('click', () => {
-      let v = parseInt(controlContent.textContent, 10);
-      if (isNaN(v)) v = MIN_VAL;
-      v = Math.max(v - 1, MIN_VAL);
-      controlContent.textContent = v;
+      dc = dc - 1;
+      if (dc < MIN_VAL) dc = MAX_VAL;
+      controlContent.textContent = dc;
     });
 
-    document.getElementById('btnRead').addEventListener('click', () => sendtext('read'));
+    document.getElementById('btnRead').addEventListener('click', () => {
+      controlContent.textContent = "...";
+      sendtext('read');
+    });
 
     document.getElementById('btnWrite').addEventListener('click', () => {
-      const v = parseInt(controlContent.textContent, 10);
-      if (isNaN(v)) return;
-      sendtext('write ' + v.toString());
+      controlContent.textContent = dc;
+      sendtext('write ' + dc.toString());
     });
 
     /* ==================== INPUT VALIDATION ==================== */
