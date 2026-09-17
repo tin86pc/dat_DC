@@ -570,13 +570,13 @@
       // v = Math.min(v + 1, MAX_VAL);
 
       dc = dc + 1;
-      if (dc > MAX_VAL) dc = MIN_VAL;
+      if (dc > MAX_VAL) dc = MAX_VAL;
       controlContent.textContent = dc;
     });
 
     document.getElementById('btnDecrease').addEventListener('click', () => {
       dc = dc - 1;
-      if (dc < MIN_VAL) dc = MAX_VAL;
+      if (dc < MIN_VAL) dc = MIN_VAL;
       controlContent.textContent = dc;
     });
 
