@@ -508,6 +508,7 @@
       // Nếu ESP32 gửi số thuần, cập nhật ControlContent
       if (/^\d+$/.test(line)) {
         controlContent.textContent = line;
+        dc = parseInt(line, 10);
       }
     }
 
