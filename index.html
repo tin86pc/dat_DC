@@ -583,7 +583,11 @@
 
     document.getElementById('btnRead').addEventListener('click', () => {
       controlContent.textContent = "...";
-      sendtext('read');
+
+      setTimeout(() => {
+        sendtext('read');
+      }, 1500);
+
     });
 
     document.getElementById('btnWrite').addEventListener('click', () => {
