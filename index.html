@@ -504,11 +504,14 @@
     }
 
     function XuLyDuLieuNhanDuoc(line) {
+      let [cmd, value] = line.split(" ");
 
-      // Nếu ESP32 gửi số thuần, cập nhật ControlContent
-      if (/^\d+$/.test(line)) {
-        controlContent.textContent = line;
-        dc = parseInt(line, 10);
+      console.log(cmd);            // "read"
+      console.log(Number(value));  // 27
+
+      if (cmd === "Read" && !isNaN(Number(value))) {
+        controlContent.textContent = value;
+        dc = Number(value);
       }
     }
 
@@ -565,11 +568,8 @@
     let dc = 1;
 
     document.getElementById('btnIncrease').addEventListener('click', () => {
-      // let v = parseInt(controlContent.textContent, 10);
-      // if (isNaN(v)) v = MIN_VAL;
-      // v = Math.min(v + 1, MAX_VAL);
-
       dc = dc + 1;
+      if (dc < MIN_VAL) dc = MIN_VAL;
       if (dc > MAX_VAL) dc = MAX_VAL;
       controlContent.textContent = dc;
     });
@@ -577,6 +577,7 @@
     document.getElementById('btnDecrease').addEventListener('click', () => {
       dc = dc - 1;
       if (dc < MIN_VAL) dc = MIN_VAL;
+      if (dc > MAX_VAL) dc = MAX_VAL;
       controlContent.textContent = dc;
     });
 
@@ -639,6 +640,19 @@
         sendCmdFromInput();
       }
     });
+
+    // let ledState = false;
+    // setInterval(() => {
+    //   if(ledState) {
+    //     sendtext('led off');
+    //     ledState = false;
+    //   } else {
+    //     sendtext('led on');
+    //     ledState = true;
+    //   }
+    // }, 5000);
+
+
   </script>
 </body>
 
