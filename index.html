@@ -353,7 +353,7 @@
     </div>
 
     <div id="ControlPanel">
-      <div id="ControlContent" contenteditable="true" inputmode="numeric">1</div>
+      <div id="ControlContent" contenteditable="true" inputmode="numeric">...</div>
       <div id="Controlbutton">
         <button id="btnIncrease">▲ Tăng</button>
         <button id="btnDecrease">▼ Giảm</button>
@@ -579,6 +579,16 @@
       if (dc < MIN_VAL) dc = MIN_VAL;
       if (dc > MAX_VAL) dc = MAX_VAL;
       controlContent.textContent = dc;
+    });
+
+    controlContent.addEventListener('input', () => {
+
+      let value = Number(controlContent.textContent);
+      if (value > 128) controlContent.textContent = 128;
+      if (value < 1) controlContent.textContent = 1;
+
+      dc = value;
+      // controlContent.textContent = dc;
     });
 
     document.getElementById('btnRead').addEventListener('click', () => {
