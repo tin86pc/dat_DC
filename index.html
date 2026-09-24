@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>ESP32 WebBluetooth</title>
+  <title>BLE-datDC</title>
 
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Ctext x='16' y='24' font-family='monospace' font-size='26' font-weight='bold' fill='%23ff0000' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
@@ -193,20 +193,19 @@
     }
 
 
+    #logControl button:hover,
+    #Controlbutton button:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      text-shadow: var(--glow);
+    }
 
-      #logControl button:hover,
-      #Controlbutton button:hover {
-        color: var(--accent);
-        border-color: var(--accent);
-        text-shadow: var(--glow);
-      }
+    #Controlbutton button:hover {
+      color: var(--accent2);
+      border-color: var(--accent2);
+      text-shadow: var(--glow2);
+    }
 
-      #Controlbutton button:hover {
-        color: var(--accent2);
-        border-color: var(--accent2);
-        text-shadow: var(--glow2);
-      }
-    
 
     #logControl button:active,
     #Controlbutton button:active,
@@ -372,8 +371,8 @@
 
     <div id="Controlbutton">
       <button id="btnNhayLed">Nháy led</button>
-      <button id="btnBatPhatXung">Bật px</button>
-      <button id="btnTatPhatXung">tắt px</button>
+      <button id="btnPhatXung">Phát xung</button>
+     
     </div>
 
   </div>
@@ -442,7 +441,7 @@
         addLog('Đang mở hộp thoại chọn thiết bị...');
 
         device = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: 'ESP32' }],
+          filters: [{ namePrefix: 'BLE' }],
           optionalServices: [NUS_SERVICE_UUID]
         });
 
@@ -667,19 +666,32 @@
     });
 
 
+    let ledOn = false;
     document.getElementById('btnNhayLed').addEventListener('click', () => {
-      sendtext("led toggle");
+      if (!ledOn) {
+        sendtext("led on");
+        ledOn = true;
+      } else {
+        sendtext("led off");
+        ledOn = false;
+      }
     });
 
-    document.getElementById('btnBatPhatXung').addEventListener('click', () => {
-      sendtext("batpx");
+    let pxOn = false;
+    document.getElementById('btnPhatXung').addEventListener('click', () => {
+      if (!pxOn) {
+        sendtext("batpx");
+        pxOn = true;
+      } else {
+        sendtext("tatpx");
+        pxOn = false;
+      }
     });
 
 
-    document.getElementById('btnTatPhatXung').addEventListener('click', () => {
-      sendtext("tatpx");
-    });
+
     
+
   </script>
 </body>
 
