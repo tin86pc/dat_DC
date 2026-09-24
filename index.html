@@ -192,17 +192,20 @@
       text-overflow: ellipsis;
     }
 
-    #logControl button:hover,
-    #Controlbutton button:hover {
-      color: var(--accent);
-      border-color: var(--accent);
-      text-shadow: var(--glow);
-    }
+    @media (hover: hover) {
 
-    #Controlbutton button:hover {
-      color: var(--accent2);
-      border-color: var(--accent2);
-      text-shadow: var(--glow2);
+      #logControl button:hover,
+      #Controlbutton button:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+        text-shadow: var(--glow);
+      }
+
+      #Controlbutton button:hover {
+        color: var(--accent2);
+        border-color: var(--accent2);
+        text-shadow: var(--glow2);
+      }
     }
 
     #logControl button:active,
@@ -367,6 +370,12 @@
       <button id="btnCmdSend">▶ Gửi</button>
     </div>
 
+    <div id="Controlbutton">
+      <button id="btnNhayLed">Nháy led</button>
+      <button id="btnBatPhatXung">Bật px</button>
+      <button id="btnTatPhatXung">tắt px</button>
+    </div>
+
   </div>
 
   <script>
@@ -507,7 +516,10 @@
       let [cmd, value] = line.split(" ");
 
       console.log(cmd);            // "read"
-      console.log(Number(value));  // 27
+      if (!isNaN(Number(value))) {
+        console.log(Number(value));  // 27
+      }
+
 
       if (cmd === "Read" && !isNaN(Number(value))) {
         controlContent.textContent = value;
@@ -655,18 +667,20 @@
       }
     });
 
-    // let ledState = false;
-    // setInterval(() => {
-    //   if(ledState) {
-    //     sendtext('led off');
-    //     ledState = false;
-    //   } else {
-    //     sendtext('led on');
-    //     ledState = true;
-    //   }
-    // }, 5000);
+
+    document.getElementById('btnNhayLed').addEventListener('click', () => {
+      sendtext("led toggle");
+    });
+
+    document.getElementById('btnBatPhatXung').addEventListener('click', () => {
+      sendtext("batpx");
+    });
 
 
+    document.getElementById('btnTatPhatXung').addEventListener('click', () => {
+      sendtext("tatpx");
+    });
+    
   </script>
 </body>
 
