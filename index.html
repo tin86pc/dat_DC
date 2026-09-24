@@ -192,7 +192,7 @@
       text-overflow: ellipsis;
     }
 
-    @media (hover: hover) {
+
 
       #logControl button:hover,
       #Controlbutton button:hover {
@@ -206,7 +206,7 @@
         border-color: var(--accent2);
         text-shadow: var(--glow2);
       }
-    }
+    
 
     #logControl button:active,
     #Controlbutton button:active,
@@ -348,7 +348,7 @@
     <div id="logPanel">
       <div id="logContent"></div>
       <div id="logControl">
-        <button id="btnConnect" class="disconnected">🔗 Kết nối</button>
+        <button id="btnConnect">🔗 Kết nối</button>
         <button id="btnClearLog">🗑 Xóa</button>
         <button id="btnSaveText">💾 Lưu</button>
         <button id="btnExpand">▲ Mở</button>
@@ -430,7 +430,6 @@
       statusBar.textContent = connected ? '🟢 Đã kết nối' : '⚫ Chưa kết nối';
       statusBar.className = connected ? 'connected' : 'disconnected';
       btnConnect.textContent = connected ? '🔌 Ngắt kết nối' : '🔗 Kết nối';
-      btnConnect.className = connected ? 'connected' : 'disconnected';
     }
 
     async function connectBLE() {
