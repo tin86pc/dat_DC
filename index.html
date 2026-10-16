@@ -602,6 +602,8 @@
     });
 
     document.getElementById('btnRead').addEventListener('click', () => {
+      sendtext("tatpx");
+        pxOn = false;
       controlContent.textContent = "...";
 
       setTimeout(() => {
@@ -611,7 +613,9 @@
     });
 
     document.getElementById('btnWrite').addEventListener('click', () => {
-     controlContent.textContent = "...";
+      sendtext("tatpx");
+        pxOn = false;
+      controlContent.textContent = "...";
       sendtext('write ' + dc.toString());
     });
 
