@@ -355,7 +355,7 @@
     </div>
 
     <div id="ControlPanel">
-      <div id="ControlContent" contenteditable="true" inputmode="numeric">...</div>
+      <input type="text" id="ControlContent" placeholder="..." />
       <div id="Controlbutton">
         <button id="btnIncrease">▲ Tăng</button>
         <button id="btnDecrease">▼ Giảm</button>
@@ -522,7 +522,7 @@
 
 
       if (cmd === "Read" && !isNaN(Number(value))) {
-        controlContent.textContent = value;
+        controlContent.value = value;
         dc = Number(value);
       }
     }
@@ -579,37 +579,66 @@
     const MAX_VAL = 128;
     let dc = 1;
 
+    // Hàm cập nhật giá trị chuẩn
+    function updateValue(newVal) {
+      let num = parseInt(newVal, 10);
+
+      if (isNaN(num)) {
+        num = MIN_VAL;
+      } else if (num > MAX_VAL) {
+        num = MAX_VAL;
+      } else if (num < MIN_VAL) {
+        num = MIN_VAL;
+      }
+
+      dc = num;
+      controlContent.value = dc;
+    }
+
     document.getElementById('btnIncrease').addEventListener('click', () => {
-      dc = dc + 1;
-      if (dc < MIN_VAL) dc = MIN_VAL;
-      if (dc > MAX_VAL) dc = MAX_VAL;
-      controlContent.textContent = dc;
+      updateValue(dc + 1);
+
     });
 
     document.getElementById('btnDecrease').addEventListener('click', () => {
-      dc = dc - 1;
-      if (dc < MIN_VAL) dc = MIN_VAL;
-      if (dc > MAX_VAL) dc = MAX_VAL;
-      controlContent.textContent = dc;
+      updateValue(dc - 1);
     });
 
+
+    let timeoutId;
     controlContent.addEventListener('input', () => {
+      clearTimeout(timeoutId);
 
-      let value = Number(controlContent.textContent);
-      if (value > 128) controlContent.textContent = 128;
-      if (value < 1) controlContent.textContent = 1;
+      let text = controlContent.value;
 
-      dc = value;
-      // controlContent.textContent = dc;
+      timeoutId = setTimeout(() => {
+
+        // Xóa tất cả ký tự không phải số
+        let rawValue = text.replace(/\D/g, '');
+
+        if (rawValue === "" || isNaN(rawValue)) {
+          controlContent.value = ""; // Vẫn để trống để hiện placeholder
+          return;
+        }
+
+        updateValue(rawValue);
+
+        moveCursorToEnd(controlContent);
+
+
+      }, 3000);
+
     });
+
 
     document.getElementById('btnRead').addEventListener('click', () => {
       if (pxOn) {
         sendtext("tatpx");
         pxOn = false;
       }
-      controlContent.textContent = "...";
+      controlContent.value = "";
 
+      // Chờ 1.5 giây trước khi gửi lệnh đọc để tránh xung đột với các lệnh khác
       setTimeout(() => {
         sendtext('read');
       }, 1500);
@@ -622,39 +651,8 @@
         pxOn = false;
       }
 
-      controlContent.textContent = "...";
+      controlContent.value = "";
       sendtext('write ' + dc.toString());
-    });
-
-    /* ==================== INPUT VALIDATION ==================== */
-    controlContent.addEventListener('keydown', (e) => {
-      const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End'];
-      if (allowedKeys.includes(e.key)) {
-        if (e.key === 'Enter') { e.preventDefault(); controlContent.blur(); }
-        return;
-      }
-      if (!/^[0-9]$/.test(e.key)) { e.preventDefault(); return; }
-
-      const sel = window.getSelection();
-      const currentText = controlContent.textContent;
-      const cursorPos = sel.anchorOffset;
-      const newText = currentText.slice(0, cursorPos) + e.key + currentText.slice(cursorPos);
-      const newValue = parseInt(newText, 10);
-      if (!isNaN(newValue) && newValue > MAX_VAL) e.preventDefault();
-    });
-
-    controlContent.addEventListener('paste', (e) => {
-      e.preventDefault();
-      const text = (e.clipboardData || window.clipboardData).getData('text');
-      const digitsOnly = text.replace(/[^0-9]/g, '');
-      document.execCommand('insertText', false, digitsOnly);
-    });
-
-    controlContent.addEventListener('blur', () => {
-      let value = parseInt(controlContent.textContent, 10);
-      if (isNaN(value)) value = MIN_VAL;
-      value = Math.max(MIN_VAL, Math.min(MAX_VAL, value));
-      controlContent.textContent = value;
     });
 
     /* ==================== CMD INPUT ==================== */
