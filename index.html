@@ -372,7 +372,7 @@
     <div id="Controlbutton">
       <button id="btnNhayLed">Nháy led</button>
       <button id="btnPhatXung">Phát xung</button>
-     
+
     </div>
 
   </div>
@@ -382,6 +382,8 @@
     const logs = [];
     const MAX_LOG = 500;
     const logContent = document.getElementById("logContent");
+
+    let pxOn = false;
 
     function addLog(...args) {
       const time = new Date().toLocaleTimeString();
@@ -602,8 +604,10 @@
     });
 
     document.getElementById('btnRead').addEventListener('click', () => {
-      sendtext("tatpx");
+      if (pxOn) {
+        sendtext("tatpx");
         pxOn = false;
+      }
       controlContent.textContent = "...";
 
       setTimeout(() => {
@@ -613,8 +617,11 @@
     });
 
     document.getElementById('btnWrite').addEventListener('click', () => {
-      sendtext("tatpx");
+      if (pxOn) {
+        sendtext("tatpx");
         pxOn = false;
+      }
+
       controlContent.textContent = "...";
       sendtext('write ' + dc.toString());
     });
@@ -681,7 +688,7 @@
       }
     });
 
-    let pxOn = false;
+
     document.getElementById('btnPhatXung').addEventListener('click', () => {
       if (!pxOn) {
         sendtext("batpx");
@@ -694,7 +701,7 @@
 
 
 
-    
+
 
   </script>
 </body>
