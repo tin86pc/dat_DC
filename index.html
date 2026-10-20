@@ -372,8 +372,24 @@
     <div id="Controlbutton">
       <button id="btnNhayLed">Nháy led</button>
       <button id="btnPhatXung">Phát xung</button>
-
     </div>
+
+
+    <div id="otaPanel">
+      <div
+        style="display:flex; flex-direction:column; gap:8px; padding:10px; background:var(--bg3); border-top:1px solid var(--border);">
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="file" id="otaFile" accept=".bin" style="flex:1; color:var(--text); font-size:var(--fs-xs);" />
+          <button id="btnOtaStart" style="min-width:90px;">⬆ OTA Local</button>
+          <button id="btnOtaOnline" style="min-width:90px;">⬆ OTA online</button>
+        </div>
+
+      </div>
+    </div>
+
+
+
 
   </div>
 
@@ -695,6 +711,126 @@
     });
 
 
+    /* ==================== OTA ==================== */
+
+    const otaFileInput = document.getElementById('otaFile');
+    const btnOtaStart = document.getElementById('btnOtaStart');
+    const btnOtaOnline = document.getElementById('btnOtaOnline');
+
+    /* ==================== CRC32 ==================== */
+    function crc32(buffer) {
+      let crc = 0xFFFFFFFF;
+      const table = new Uint32Array(256);
+      for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) {
+          c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[i] = c;
+      }
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.length; i++) {
+        crc = table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+      }
+      return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    /* ==================== Hàm OTA chung ==================== */
+    async function startOta(arrayBuffer, fileName = "firmware.bin") {
+      if (!txChar) {
+        addLog("Chưa kết nối BLE");
+        return;
+      }
+
+      const size = arrayBuffer.byteLength;
+      const fileCrc = crc32(arrayBuffer);
+
+      addLog(`File: ${fileName}`);
+      addLog(`Size: ${(size / 1024).toFixed(1)} KB`);
+      addLog(`CRC32: 0x${fileCrc.toString(16).toUpperCase()}`);
+
+      // Gửi lệnh begin + CRC
+      await sendtext(`ota begin ${size} ${fileCrc.toString(16)}`);
+      await new Promise(r => setTimeout(r, 1200));
+
+      addLog("Bắt đầu gửi dữ liệu...");
+
+      // mức tốc độ 1
+      // const CHUNK_SIZE = 200;
+      // const DELAY_MS = 12;
+
+      // Thử mức 2
+      // const CHUNK_SIZE = 320;
+      // const DELAY_MS = 6;
+
+      // Thử mức 3
+      const CHUNK_SIZE = 400;
+      const DELAY_MS = 5;
+
+      let offset = 0;
+      let lastPercent = -1;
+
+      try {
+        while (offset < size) {
+          if (!device?.gatt?.connected) {
+            addLog("Mất kết nối giữa chừng!");
+            return;
+          }
+
+          const end = Math.min(offset + CHUNK_SIZE, size);
+          const chunk = arrayBuffer.slice(offset, end);
+          await txChar.writeValue(new Uint8Array(chunk));
+
+          offset = end;
+          const percent = Math.floor((offset / size) * 100);
+
+          if (percent !== lastPercent && (percent % 5 === 0 || percent === 100)) {
+            addLog(`Tiến độ: ${percent}%`);
+            lastPercent = percent;
+          }
+
+          await new Promise(r => setTimeout(r, DELAY_MS));
+        }
+
+        addLog("Đã gửi xong. Đợi ESP32 kiểm tra CRC và restart...");
+      } catch (err) {
+        addLog("Lỗi: " + err.message);
+        try { await sendtext("ota abort"); } catch (e) { }
+      }
+    }
+
+    /* ==================== OTA Local ==================== */
+    document.getElementById("btnOtaStart").addEventListener("click", async () => {
+      const file = document.getElementById("otaFile").files[0];
+      if (!file) {
+        addLog("Chưa chọn file .bin");
+        return;
+      }
+      const buffer = await file.arrayBuffer();
+      await startOta(buffer, file.name);
+    });
+
+    /* ==================== OTA Online (GitHub cố định) ==================== */
+    document.getElementById("btnOtaOnline").addEventListener("click", async () => {
+      // Link raw cố định của bạn
+      const url = "https://raw.githubusercontent.com/tin86pc/dat_DC/main/firmware.bin";
+
+      addLog("Đang tải firmware từ GitHub...");
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const buffer = await response.arrayBuffer();
+        if (buffer.byteLength < 20000) {
+          throw new Error("File quá nhỏ, có thể không phải firmware");
+        }
+
+        await startOta(buffer, "firmware.bin (GitHub)");
+      } catch (err) {
+        addLog("Lỗi tải file: " + err.message);
+      }
+    });
 
 
 
