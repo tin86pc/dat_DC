@@ -66,12 +66,21 @@
       #colCtrl { overflow-y: auto; padding-right: 2px; }
     }
 
-    /* Nút phóng to log: chỉ dùng khi điện thoại dọc */
-    .btn-expand { display: none; }
+    /* Điện thoại dọc: cuộn trang bình thường, điều khiển ở trên, nhật ký ở dưới */
     @media (max-width: 859px) and (orientation: portrait) {
-      .btn-expand { display: inline-block; }
-      #app.log-full #colCtrl { display: none; }
-      #logContent { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+      #app {
+        display: block;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-top: 0;
+      }
+      header {
+        position: sticky; top: 0; z-index: 5;
+        height: 52px; margin-bottom: 8px;
+        box-shadow: 0 8px 0 var(--bg);
+      }
+      #colCtrl { margin-bottom: 8px; }
+      #logCard { height: 60dvh; }
     }
 
     /* Gọn hơn trên màn hình nhỏ */
@@ -308,7 +317,6 @@
       <div class="log-head">
         <h2>Nhật ký</h2>
         <div class="tools">
-          <button id="btnExpand" class="btn-expand">▲ Mở</button>
           <button id="btnClearLog">🗑 Xóa</button>
           <button id="btnSaveText">💾 Lưu</button>
         </div>
@@ -489,12 +497,6 @@
       a.remove();
       URL.revokeObjectURL(url);
       addLog('Lưu log ra file ' + a.download);
-    });
-
-    document.getElementById("btnExpand").addEventListener("click", () => {
-      const full = document.getElementById("app").classList.toggle("log-full");
-      document.getElementById("btnExpand").textContent = full ? "▼ Thu" : "▲ Mở";
-      logContent.scrollTop = logContent.scrollHeight;
     });
 
     document.getElementById("btnClearLog").addEventListener("click", () => {
