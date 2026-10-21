@@ -72,15 +72,11 @@
         display: block;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        padding-top: 0;
+        padding-top: max(8px, env(safe-area-inset-top));
       }
-      header {
-        position: sticky; top: 0; z-index: 5;
-        height: 52px; margin-bottom: 8px;
-        box-shadow: 0 8px 0 var(--bg);
-      }
+      header { height: 52px; margin-bottom: 8px; }
       #colCtrl { margin-bottom: 8px; }
-      #logCard { height: 60dvh; }
+      #logCard { height: 45dvh; margin-bottom: 8px; }
     }
 
     /* Gọn hơn trên màn hình nhỏ */
@@ -263,9 +259,20 @@
 <body>
   <div id="app">
 
-    <!-- ===== HEADER: kết nối ===== -->
+    <!-- ===== LOG (đặt trên đầu) ===== -->
+    <section class="card" id="logCard">
+      <div class="log-head">
+        <h2>Nhật ký</h2>
+        <div class="tools">
+          <button id="btnClearLog">🗑 Xóa</button>
+          <button id="btnSaveText">💾 Lưu</button>
+        </div>
+      </div>
+      <div id="logContent"></div>
+    </section>
+
+    <!-- ===== KẾT NỐI (giữa nhật ký và điều khiển) ===== -->
     <header>
-      <div class="brand">BLE · datDC</div>
       <div id="statusBar" class="status">Chưa kết nối</div>
       <button id="btnConnect" class="danger">🔗 Kết nối</button>
     </header>
@@ -312,17 +319,6 @@
       </section>
     </div>
 
-    <!-- ===== LOG ===== -->
-    <section class="card" id="logCard">
-      <div class="log-head">
-        <h2>Nhật ký</h2>
-        <div class="tools">
-          <button id="btnClearLog">🗑 Xóa</button>
-          <button id="btnSaveText">💾 Lưu</button>
-        </div>
-      </div>
-      <div id="logContent"></div>
-    </section>
   </div>
 
   <!-- ===== MODAL OTA ===== -->
