@@ -5,392 +5,328 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>BLE-datDC</title>
-
   <link rel="icon"
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Ctext x='16' y='24' font-family='monospace' font-size='26' font-weight='bold' fill='%23ff0000' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
 
   <style>
     :root {
       --bg: #0a0c0f;
-      --bg2: #0f1318;
-      --bg3: #141a22;
+      --card: #10151b;
+      --card2: #151c25;
       --border: #1e2d3d;
       --accent: #00d4ff;
-      --accent2: #00ff88;
+      --ok: #00ff88;
       --warn: #ffb300;
-      --error: #ff4757;
-      --dim: #3a4a5c;
+      --err: #ff4757;
       --text: #c8d8e8;
-      --text-dim: #56707a;
-      --mono: "Share Tech Mono", monospace;
-      --display: "Rajdhani", sans-serif;
-      --glow: 0 0 calc(0.8 * 1dvmin) rgba(0, 212, 255, 0.4);
-      --glow2: 0 0 calc(0.8 * 1dvmin) rgba(0, 255, 136, 0.4);
-
-      --u: 2dvmin;
-      --fs-xs: calc(1.6 * var(--u));
-      --fs-sm: calc(1.9 * var(--u));
-      --fs-md: calc(2.2 * var(--u));
-      --fs-lg: calc(2.6 * var(--u));
-      --fs-xl: calc(12 * var(--u));
-
-      --gap-sm: calc(0.8 * var(--u));
-      --gap-md: calc(1.2 * var(--u));
-      --gap-lg: calc(2 * var(--u));
-
-      --pad-sm: calc(0.8 * var(--u));
-      --pad-md: calc(1.5 * var(--u));
-      --pad-lg: calc(2.5 * var(--u));
-
-      --radius: calc(0.6 * var(--u));
-      --border-w: calc(0.12 * var(--u));
-
-      --h-log: calc(20 * var(--u));
-      --h-control-panel: calc(28 * var(--u));
-      --h-bar: calc(7 * var(--u));
+      --dim: #6a8090;
+      --mono: ui-monospace, "Share Tech Mono", Consolas, monospace;
+      --sans: "Rajdhani", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --r: 10px;
     }
 
-    @supports not (height: 1dvmin) {
-      :root {
-        --u: 1vmin;
-      }
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    * {
-      padding: 0;
-      margin: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html,
-    body {
-      width: 100%;
+    html, body {
       height: 100%;
-      height: 100dvh;
-      overflow: hidden;
       background: var(--bg);
       color: var(--text);
-      font-family: var(--mono);
-      overscroll-behavior: none;
+      font-family: var(--sans);
+      font-size: 16px;
     }
 
-    #main {
-      width: 100%;
+    body { overscroll-behavior: none; }
+
+    /* ===== LAYOUT ===== */
+    html, body { overflow: hidden; }
+
+    #app {
       height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background-color: var(--bg);
-      border: var(--border-w) solid var(--border);
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      display: grid;
+      gap: 8px;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "head" "ctrl" "log";
+      grid-template-rows: auto auto minmax(0, 1fr);
     }
 
-    /* ============ STATUS BAR ============ */
-    #statusBar {
-      flex: 0 0 var(--h-bar);
+    header { grid-area: head; }
+    #colCtrl { grid-area: ctrl; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+    #logCard { grid-area: log; min-height: 0; }
+
+    /* Màn hình rộng hoặc điện thoại nằm ngang: 2 cột */
+    @media (min-width: 860px), (orientation: landscape) and (min-width: 560px) {
+      #app {
+        grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+        grid-template-areas: "head head" "ctrl log";
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+      #colCtrl { overflow-y: auto; padding-right: 2px; }
+    }
+
+    /* Nút phóng to log: chỉ dùng khi điện thoại dọc */
+    .btn-expand { display: none; }
+    @media (max-width: 859px) and (orientation: portrait) {
+      .btn-expand { display: inline-block; }
+      #app.log-full #colCtrl { display: none; }
+      #logContent { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    }
+
+    /* Gọn hơn trên màn hình nhỏ */
+    @media (max-width: 859px) {
+      .card { padding: 8px 10px; gap: 8px; }
+      header { padding: 6px 10px; }
+      .brand { font-size: 1.1rem; }
+      .status { font-size: .8rem; }
+      button { min-height: 40px; }
+      #dcInput { font-size: 2rem; }
+      .dc-box button { flex-basis: 48px; }
+      .range-scale { display: none; }
+      #cmdInput { min-height: 40px; }
+    }
+
+    /* ===== HEADER ===== */
+    header {
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 0 var(--pad-sm);
-      background: var(--bg3);
-      border-bottom: var(--border-w) solid var(--border);
-      font-family: var(--display);
-      font-size: var(--fs-sm);
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      transition: color 0.2s, text-shadow 0.2s;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
     }
 
-    #statusBar.disconnected {
-      color: var(--error);
-      text-shadow: 0 0 calc(0.8 * var(--u)) rgba(255, 71, 87, 0.4);
-    }
+    .brand { font-weight: 700; font-size: 1.35rem; letter-spacing: .06em; color: var(--accent); }
 
-    #statusBar.connected {
-      color: var(--accent2);
-      text-shadow: var(--glow2);
+    .status {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .95rem;
+      color: var(--err);
     }
+    .status::before {
+      content: ""; width: 10px; height: 10px; border-radius: 50%;
+      background: currentColor; box-shadow: 0 0 8px currentColor;
+    }
+    .status.connected { color: var(--ok); }
 
-    /* ============ LOG PANEL ============ */
-    #logPanel {
-      flex: 0 0 var(--h-log);
-      width: 100%;
+    /* ===== CARD ===== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 12px 14px;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      transition: flex-basis 0.25s ease;
+      gap: 12px;
     }
 
-    #logPanel.expanded {
-      flex: 1 1 auto;
+    .card h2 {
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--dim);
     }
+
+    /* ===== BUTTONS ===== */
+    button {
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: .04em;
+      min-height: 44px;
+      padding: 0 14px;
+      color: var(--text);
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color .15s, color .15s, background .15s, transform .08s;
+    }
+    button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    button:active:not(:disabled) { transform: scale(.97); }
+    button:disabled { opacity: .35; cursor: not-allowed; }
+
+    button.primary { color: var(--ok); border-color: var(--ok); }
+    button.primary:hover:not(:disabled) { background: rgba(0, 255, 136, .08); color: var(--ok); border-color: var(--ok); }
+    button.danger { color: var(--warn); border-color: var(--warn); }
+    button.danger:hover:not(:disabled) { background: rgba(255, 179, 0, .1); color: var(--warn); border-color: var(--warn); }
+    button.toggle[aria-pressed="true"] { background: rgba(0, 212, 255, .12); border-color: var(--accent); color: var(--accent); }
+
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1 1 0; min-width: 0; }
+
+    /* ===== DC VALUE ===== */
+    .dc-box { display: flex; align-items: stretch; gap: 8px; }
+    .dc-box button { flex: 0 0 56px; font-size: 1.4rem; }
+
+    #dcInput {
+      flex: 1 1 auto;
+      min-width: 0;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 3rem;
+      line-height: 1.2;
+      color: var(--accent);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      text-shadow: 0 0 10px rgba(0, 212, 255, .4);
+    }
+    #dcInput:focus { border-color: var(--accent); }
+
+    input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+    .range-scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .75rem; color: var(--dim); margin-top: -6px; }
+
+    /* ===== CMD ===== */
+    #cmdInput {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 44px;
+      padding: 0 12px;
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+    }
+    #cmdInput:focus { border-color: var(--accent); }
+    #cmdRow button { flex: 0 0 auto; }
+
+    /* ===== OTA ===== */
+    .progress { height: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; overflow: hidden; }
+    .progress > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--ok)); transition: width .15s; }
+    .progress-text { font-family: var(--mono); font-size: .8rem; color: var(--dim); }
+
+    /* ===== LOG ===== */
+    #logCard { padding: 0; overflow: hidden; gap: 0; }
+    .log-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--card2);
+    }
+    .log-head .tools { display: flex; gap: 6px; }
+    .log-head button { min-height: 34px; padding: 0 10px; font-size: .9rem; }
 
     #logContent {
       flex: 1 1 auto;
       overflow-y: auto;
-      color: var(--accent2);
-      background: var(--bg2);
+      padding: 8px 12px;
+      background: var(--bg);
       font-family: var(--mono);
-      font-size: var(--fs-sm);
-      line-height: 1.45;
+      font-size: .85rem;
+      line-height: 1.5;
       white-space: pre-wrap;
-      padding: var(--pad-sm);
       word-break: break-word;
     }
+    #logContent .t { color: var(--dim); }
+    #logContent .sys { color: var(--dim); }
+    #logContent .tx { color: var(--accent); }
+    #logContent .rx { color: var(--ok); }
+    #logContent .err { color: var(--err); }
+    #logContent::-webkit-scrollbar { width: 8px; }
+    #logContent::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-    #logContent>div {
-      animation: fadeIn 0.15s ease;
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 99;
+      display: none; align-items: center; justify-content: center;
+      padding: 16px; background: rgba(0, 0, 0, .75); backdrop-filter: blur(2px);
     }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(calc(0.3 * var(--u)));
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+      width: 100%; max-width: 420px; padding: 18px;
+      background: var(--card); border: 1px solid var(--warn); border-radius: var(--r);
+      display: flex; flex-direction: column; gap: 14px;
     }
-
-    #logControl,
-    #Controlbutton {
-      flex: 0 0 var(--h-bar);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--gap-sm);
-      padding: var(--pad-sm);
-      background: var(--bg3);
-      border-top: var(--border-w) solid var(--border);
-      flex-wrap: nowrap;
-      overflow: hidden;
-    }
-
-    #logControl button,
-    #Controlbutton button,
-    #btnCmdSend {
-      flex: 1 1 0;
-      min-width: 0;
-      height: 100%;
-      padding: 0 var(--pad-sm);
-      font-size: var(--fs-xs);
-      font-family: var(--display);
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      background: transparent;
-      color: var(--text-dim);
-      border: var(--border-w) solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-
-    #logControl button:hover,
-    #Controlbutton button:hover {
-      color: var(--accent);
-      border-color: var(--accent);
-      text-shadow: var(--glow);
-    }
-
-    #Controlbutton button:hover {
-      color: var(--accent2);
-      border-color: var(--accent2);
-      text-shadow: var(--glow2);
-    }
-
-
-    #logControl button:active,
-    #Controlbutton button:active,
-    #btnCmdSend:active {
-      transform: scale(0.96);
-    }
-
-    #btnConnect.connected {
-      color: var(--accent2);
-      border-color: var(--accent2);
-      text-shadow: var(--glow2);
-    }
-
-    #btnConnect.disconnected {
-      color: var(--warn);
-      border-color: var(--warn);
-      text-shadow: 0 0 calc(0.8 * var(--u)) rgba(255, 179, 0, 0.4);
-    }
-
-    /* ============ CONTROL PANEL ============ */
-    #ControlPanel {
-      flex: 0 0 var(--h-control-panel);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--bg2);
-    }
-
-    #ControlContent {
-      flex: 1 1 auto;
-      overflow: hidden;
-      color: var(--accent);
-      background: var(--bg2);
-      font-family: var(--mono);
-      font-size: var(--fs-xl);
-      line-height: 1;
-      text-shadow: var(--glow);
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-
-      outline: none;
-      cursor: text;
-      user-select: text;
-      padding: var(--pad-sm);
-      transition: text-shadow 0.2s;
-    }
-
-    #ControlContent:focus {
-      text-shadow: var(--glow2);
-    }
-
-    /* ============ CMD PANEL ============ */
-    #cmdPanel {
-      flex: 0 0 var(--h-bar);
-      display: flex;
-      align-items: center;
-      gap: var(--gap-sm);
-      padding: var(--pad-sm);
-      background: var(--bg3);
-      border-top: var(--border-w) solid var(--border);
-    }
-
-    #cmdInput {
-      flex: 1 1 auto;
-      min-width: 0;
-      height: 100%;
-      background: var(--bg2);
-      border: var(--border-w) solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      padding: 0 var(--pad-md);
-      font-family: var(--mono);
-      font-size: var(--fs-md);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    #cmdInput:focus {
-      border-color: var(--accent);
-      box-shadow: var(--glow);
-    }
-
-    #cmdInput::placeholder {
-      color: var(--text-dim);
-    }
-
-    #btnCmdSend {
-      flex: 0 0 auto;
-      width: auto;
-      min-width: calc(12 * var(--u));
-      padding: 0 var(--pad-md);
-    }
-
-    #btnCmdSend:hover {
-      color: var(--accent);
-      border-color: var(--accent);
-      text-shadow: var(--glow);
-    }
-
-    /* ============ SCROLLBAR ============ */
-    #logContent::-webkit-scrollbar {
-      width: calc(0.8 * var(--u));
-    }
-
-    #logContent::-webkit-scrollbar-track {
-      background: var(--bg2);
-    }
-
-    #logContent::-webkit-scrollbar-thumb {
-      background: var(--dim);
-      border-radius: var(--radius);
-    }
-
-    #logContent::-webkit-scrollbar-thumb:hover {
-      background: var(--accent);
-    }
-
-    /* ============ LANDSCAPE THẤP ============ */
-    @media (orientation: landscape) and (max-height: 500px) {
-      :root {
-        --u: 1.1vmin;
-        --h-log: calc(30 * var(--u));
-        --h-control-panel: calc(40 * var(--u));
-        --h-bar: calc(10 * var(--u));
-        --fs-xl: calc(18 * var(--u));
-      }
-    }
+    .modal-title { text-align: center; font-weight: 700; font-size: 1.2rem; color: var(--warn); text-transform: uppercase; letter-spacing: .06em; }
+    .modal-body { font-family: var(--mono); font-size: .9rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+    .modal-body .info { color: var(--accent); font-weight: 700; }
+    .modal-body .warn { color: var(--err); font-weight: 700; }
   </style>
 </head>
 
 <body>
-  <div id="main">
+  <div id="app">
 
-    <div id="statusBar" class="disconnected">⚫ Chưa kết nối</div>
+    <!-- ===== HEADER: kết nối ===== -->
+    <header>
+      <div class="brand">BLE · datDC</div>
+      <div id="statusBar" class="status">Chưa kết nối</div>
+      <button id="btnConnect" class="danger">🔗 Kết nối</button>
+    </header>
 
-    <div id="logPanel">
-      <div id="logContent"></div>
-      <div id="logControl">
-        <button id="btnConnect">🔗 Kết nối</button>
-        <button id="btnClearLog">🗑 Xóa</button>
-        <button id="btnSaveText">💾 Lưu</button>
-        <button id="btnExpand">▲ Mở</button>
-      </div>
-    </div>
+    <!-- ===== CỘT ĐIỀU KHIỂN ===== -->
+    <div id="colCtrl">
 
-    <div id="ControlPanel">
-      <input type="text" id="ControlContent" placeholder="..." />
-      <div id="Controlbutton">
-        <button id="btnIncrease">▲ Tăng</button>
-        <button id="btnDecrease">▼ Giảm</button>
-        <button id="btnWrite">💾 Ghi</button>
-        <button id="btnRead">▶ Đọc</button>
-      </div>
-    </div>
-
-    <div id="cmdPanel">
-      <input id="cmdInput" type="text" placeholder="Nhập lệnh... " autocomplete="off" />
-      <button id="btnCmdSend">▶ Gửi</button>
-    </div>
-
-    <div id="Controlbutton">
-      <button id="btnNhayLed">Nháy led</button>
-      <button id="btnPhatXung">Phát xung</button>
-    </div>
-
-
-    <div id="otaPanel">
-      <div
-        style="display:flex; flex-direction:column; gap:8px; padding:10px; background:var(--bg3); border-top:1px solid var(--border);">
-
-        <div style="display:flex; gap:8px; align-items:center;">
-          <input type="file" id="otaFile" accept=".bin" style="flex:1; color:var(--text); font-size:var(--fs-xs);" />
-          <button id="btnOtaStart" style="min-width:90px;">⬆ OTA Local</button>
-          <button id="btnOtaOnline" style="min-width:90px;">⬆ OTA online</button>
+      <section class="card">
+        <h2>Giá trị DC (1 – 127)</h2>
+        <div class="dc-box">
+          <button id="btnDecrease" aria-label="Giảm">−</button>
+          <input id="dcInput" type="text" inputmode="numeric" value="1" autocomplete="off" />
+          <button id="btnIncrease" aria-label="Tăng">+</button>
         </div>
+        <input id="dcRange" type="range" min="1" max="127" value="1" />
+        <div class="range-scale"><span>1</span><span>64</span><span>127</span></div>
+        <div class="row">
+          <button id="btnRead" class="needs-conn">▶ Đọc từ thiết bị</button>
+          <button id="btnWrite" class="needs-conn primary">💾 Ghi xuống thiết bị</button>
+        </div>
+      </section>
 
-      </div>
+      <section class="card">
+        <h2>Điều khiển nhanh</h2>
+        <div class="row">
+          <button id="btnNhayLed" class="needs-conn toggle" aria-pressed="false">💡 Nháy LED</button>
+          <button id="btnPhatXung" class="needs-conn toggle" aria-pressed="false">〰 Phát xung</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Lệnh thủ công</h2>
+        <div class="row" id="cmdRow">
+          <input id="cmdInput" type="text" placeholder="Nhập lệnh..." autocomplete="off" />
+          <button id="btnCmdSend" class="needs-conn">▶ Gửi</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Cập nhật firmware</h2>
+        <button id="btnOtaOnline" class="needs-conn danger">⬆ OTA online (GitHub)</button>
+        <div class="progress"><div id="otaBar"></div></div>
+        <div id="otaText" class="progress-text">Sẵn sàng</div>
+      </section>
     </div>
 
+    <!-- ===== LOG ===== -->
+    <section class="card" id="logCard">
+      <div class="log-head">
+        <h2>Nhật ký</h2>
+        <div class="tools">
+          <button id="btnExpand" class="btn-expand">▲ Mở</button>
+          <button id="btnClearLog">🗑 Xóa</button>
+          <button id="btnSaveText">💾 Lưu</button>
+        </div>
+      </div>
+      <div id="logContent"></div>
+    </section>
+  </div>
 
-
-
+  <!-- ===== MODAL OTA ===== -->
+  <div id="otaModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-title">⚠ Xác nhận OTA Online</div>
+      <div class="modal-body" id="otaModalBody"></div>
+      <div class="row">
+        <button id="otaCancel">✖ Hủy</button>
+        <button id="otaConfirm" class="danger">✔ Xác nhận</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -399,72 +335,83 @@
     const MAX_LOG = 500;
     const logContent = document.getElementById("logContent");
 
-    let pxOn = false;
-
-    function addLog(...args) {
+    // type: sys | tx | rx | err
+    function addLog(text, type = 'sys') {
       const time = new Date().toLocaleTimeString();
-      const text = `[${time}] ${args.join(' ')}`;
-      logs.push(text);
+      logs.push(`[${time}] ${text}`);
       if (logs.length > MAX_LOG) logs.shift();
 
-      const autoScroll =
-        logContent.scrollTop + logContent.clientHeight >=
-        logContent.scrollHeight - 5;
+      const stick = logContent.scrollTop + logContent.clientHeight >= logContent.scrollHeight - 5;
 
       const line = document.createElement("div");
-      line.textContent = text;
+      const t = document.createElement("span");
+      t.className = "t";
+      t.textContent = `[${time}] `;
+      const m = document.createElement("span");
+      m.className = type;
+      m.textContent = text;
+      line.append(t, m);
       logContent.appendChild(line);
 
-      while (logContent.children.length > MAX_LOG) {
-        logContent.removeChild(logContent.firstChild);
-      }
-
-      if (autoScroll) logContent.scrollTop = logContent.scrollHeight;
+      while (logContent.children.length > MAX_LOG) logContent.removeChild(logContent.firstChild);
+      if (stick) logContent.scrollTop = logContent.scrollHeight;
     }
 
     window.addEventListener('load', () => {
       addLog('Web Bluetooth sẵn sàng. Nhấn "Kết nối" để bắt đầu.');
       if (!navigator.bluetooth) {
-        addLog('⚠ Trình duyệt không hỗ trợ Web Bluetooth!');
-        addLog('→ Dùng Chrome/Edge/Opera trên desktop hoặc Android.');
+        addLog('⚠ Trình duyệt không hỗ trợ Web Bluetooth!', 'err');
+        addLog('→ Dùng Chrome/Edge/Opera trên desktop hoặc Android.', 'err');
       }
+      refreshUI();
     });
 
-    /* ==================== WEB BLUETOOTH ==================== */
-    const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-    const NUS_TX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // browser -> ESP32
-    const NUS_RX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // ESP32 -> browser
-
-    let device = null;
-    let txChar = null;
-    let rxChar = null;
-    let rxBuffer = '';
+    /* ==================== TRẠNG THÁI UI ==================== */
+    let busy = false;      // đang OTA
+    let ledOn = false;
+    let pxOn = false;
 
     const statusBar = document.getElementById('statusBar');
     const btnConnect = document.getElementById('btnConnect');
+    const btnLed = document.getElementById('btnNhayLed');
+    const btnPx = document.getElementById('btnPhatXung');
 
-    function setConnected(connected) {
-      statusBar.textContent = connected ? '🟢 Đã kết nối' : '⚫ Chưa kết nối';
-      statusBar.className = connected ? 'connected' : 'disconnected';
-      btnConnect.textContent = connected ? '🔌 Ngắt kết nối' : '🔗 Kết nối';
+    function isConnected() { return !!(device && device.gatt.connected && txChar); }
+
+    function refreshUI() {
+      const c = isConnected();
+      statusBar.textContent = c ? 'Đã kết nối' : 'Chưa kết nối';
+      statusBar.className = 'status' + (c ? ' connected' : '');
+      btnConnect.textContent = c ? '🔌 Ngắt kết nối' : '🔗 Kết nối';
+      btnConnect.className = c ? 'primary' : 'danger';
+      btnConnect.disabled = busy;
+
+      document.querySelectorAll('.needs-conn').forEach(b => b.disabled = !c || busy);
+      btnLed.setAttribute('aria-pressed', ledOn);
+      btnPx.setAttribute('aria-pressed', pxOn);
     }
+
+    /* ==================== WEB BLUETOOTH ==================== */
+    const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const NUS_TX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+    const NUS_RX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+    let device = null, txChar = null, rxChar = null, rxBuffer = '';
 
     async function connectBLE() {
       if (!navigator.bluetooth) {
-        alert('Trình duyệt không hỗ trợ Web Bluetooth. Dùng Chrome/Edge/Opera.');
+        addLog('Trình duyệt không hỗ trợ Web Bluetooth. Dùng Chrome/Edge/Opera.', 'err');
         return;
       }
-
       try {
         addLog('Đang mở hộp thoại chọn thiết bị...');
-
         device = await navigator.bluetooth.requestDevice({
           filters: [{ namePrefix: 'BLE' }],
           optionalServices: [NUS_SERVICE_UUID]
         });
-
         addLog('Đã chọn: ' + device.name);
 
+        device.addEventListener('gattserverdisconnected', onDisconnected);
         const server = await device.gatt.connect();
         addLog('Đã kết nối GATT server');
 
@@ -475,99 +422,67 @@
         await rxChar.startNotifications();
         rxChar.addEventListener('characteristicvaluechanged', onNotify);
 
-        device.addEventListener('gattserverdisconnected', onDisconnected);
-
-        setConnected(true);
-        addLog('✓ Kết nối thành công. Sẵn sàng gửi lệnh!');
+        refreshUI();
+        addLog('✓ Kết nối thành công. Sẵn sàng gửi lệnh!', 'rx');
       } catch (err) {
-        if (err.name === 'NotFoundError') {
-          addLog('Đã hủy chọn thiết bị');
-        } else {
-          addLog('✗ Lỗi kết nối: ' + err.message);
-        }
-      }
-    }
-
-    function disconnectBLE() {
-      if (device && device.gatt.connected) {
-        device.gatt.disconnect();
-      } else {
-        addLog('Không có kết nối để ngắt');
+        addLog(err.name === 'NotFoundError' ? 'Đã hủy chọn thiết bị' : '✗ Lỗi kết nối: ' + err.message,
+          err.name === 'NotFoundError' ? 'sys' : 'err');
+        refreshUI();
       }
     }
 
     function onDisconnected() {
-      addLog('⚫ Thiết bị đã ngắt kết nối');
-      txChar = null;
-      rxChar = null;
-      rxBuffer = '';
-      setConnected(false);
+      addLog('Thiết bị đã ngắt kết nối');
+      txChar = null; rxChar = null; rxBuffer = '';
+      ledOn = false; pxOn = false; busy = false;
+      refreshUI();
     }
-    /* ==================== NÚT KẾT NỐI ==================== */
+
     btnConnect.addEventListener('click', () => {
-      if (device && device.gatt.connected) {
-        disconnectBLE();
-      } else {
-        connectBLE();
-      }
+      if (isConnected()) device.gatt.disconnect();
+      else connectBLE();
     });
 
-
     function onNotify(event) {
-      const chunk = new TextDecoder().decode(event.target.value);
-      rxBuffer += chunk;
-
+      rxBuffer += new TextDecoder().decode(event.target.value);
       let idx;
       while ((idx = rxBuffer.indexOf('\n')) >= 0) {
         const line = rxBuffer.slice(0, idx).replace(/\r$/, '').trim();
         rxBuffer = rxBuffer.slice(idx + 1);
         if (line) {
-          addLog('ESP32: ' + line);
+          addLog('ESP32: ' + line, 'rx');
           XuLyDuLieuNhanDuoc(line);
         }
       }
     }
 
     function XuLyDuLieuNhanDuoc(line) {
-      let [cmd, value] = line.split(" ");
-
-      console.log(cmd);            // "read"
-      if (!isNaN(Number(value))) {
-        console.log(Number(value));  // 27
-      }
-
-
-      if (cmd === "Read" && !isNaN(Number(value))) {
-        controlContent.value = value;
-        dc = Number(value);
+      const [cmd, value] = line.split(" ");
+      if (cmd === "Read" && value !== undefined && !isNaN(Number(value))) {
+        updateValue(value);
       }
     }
 
     async function sendtext(text) {
-      if (!txChar) {
-        addLog('Chưa kết nối, không gửi được');
-        return false;
-      }
+      if (!txChar) { addLog('Chưa kết nối, không gửi được', 'err'); return false; }
       try {
-        addLog('→ ' + text);
-        const encoder = new TextEncoder();
+        addLog('→ ' + text, 'tx');
         const payload = text.endsWith('\n') ? text : text + '\n';
-        await txChar.writeValue(encoder.encode(payload));
+        await txChar.writeValue(new TextEncoder().encode(payload));
         return true;
       } catch (err) {
-        addLog('Lỗi gửi: ' + err.message);
+        addLog('Lỗi gửi: ' + err.message, 'err');
         return false;
       }
     }
 
-    /* ==================== CONTROL ==================== */
+    /* ==================== LOG TOOLS ==================== */
     document.getElementById("btnSaveText").addEventListener("click", () => {
       const blob = new Blob([logs.join("\r\n")], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const now = new Date();
-      a.download =
-        `Log_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}.txt`;
+      const n = new Date(), p = v => String(v).padStart(2, '0');
+      a.download = `Log_${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}_${p(n.getHours())}-${p(n.getMinutes())}-${p(n.getSeconds())}.txt`;
       a.href = url;
       document.body.appendChild(a);
       a.click();
@@ -576,171 +491,118 @@
       addLog('Lưu log ra file ' + a.download);
     });
 
-    document.getElementById("btnClearLog").addEventListener("click", () => {
-      logs.length = 0;
-      logContent.replaceChildren();
-      addLog('Xóa log');
-    });
-
     document.getElementById("btnExpand").addEventListener("click", () => {
-      const panel = document.getElementById("logPanel");
-      const btn = document.getElementById("btnExpand");
-      panel.classList.toggle("expanded");
-      btn.textContent = panel.classList.contains("expanded") ? "▼ Thu" : "▲ Mở";
+      const full = document.getElementById("app").classList.toggle("log-full");
+      document.getElementById("btnExpand").textContent = full ? "▼ Thu" : "▲ Mở";
       logContent.scrollTop = logContent.scrollHeight;
     });
 
-    const controlContent = document.getElementById('ControlContent');
-    const MIN_VAL = 1;
-    const MAX_VAL = 127;
+    document.getElementById("btnClearLog").addEventListener("click", () => {
+      logs.length = 0;
+      logContent.replaceChildren();
+      addLog('Đã xóa log');
+    });
+
+    /* ==================== GIÁ TRỊ DC ==================== */
+    const dcInput = document.getElementById('dcInput');
+    const dcRange = document.getElementById('dcRange');
+    const MIN_VAL = 1, MAX_VAL = 127;
     let dc = 1;
 
-    // Hàm cập nhật giá trị chuẩn
-    function updateValue(newVal) {
-      let num = parseInt(newVal, 10);
-
-      if (isNaN(num)) {
-        num = MIN_VAL;
-      } else if (num > MAX_VAL) {
-        num = MAX_VAL;
-      } else if (num < MIN_VAL) {
-        num = MIN_VAL;
-      }
-
-      dc = num;
-      controlContent.value = dc;
+    function updateValue(v) {
+      let n = parseInt(v, 10);
+      if (isNaN(n)) n = MIN_VAL;
+      n = Math.min(MAX_VAL, Math.max(MIN_VAL, n));
+      dc = n;
+      dcInput.value = n;
+      dcRange.value = n;
     }
 
-    document.getElementById('btnIncrease').addEventListener('click', () => {
-      updateValue(dc + 1);
+    document.getElementById('btnIncrease').addEventListener('click', () => updateValue(dc + 1));
+    document.getElementById('btnDecrease').addEventListener('click', () => updateValue(dc - 1));
+    dcRange.addEventListener('input', () => updateValue(dcRange.value));
 
+    dcInput.addEventListener('input', () => {
+      dcInput.value = dcInput.value.replace(/\D/g, '').slice(0, 3);
     });
+    dcInput.addEventListener('change', () => updateValue(dcInput.value));
+    dcInput.addEventListener('keydown', e => { if (e.key === 'Enter') dcInput.blur(); });
+    dcInput.addEventListener('focus', () => dcInput.select());
 
-    document.getElementById('btnDecrease').addEventListener('click', () => {
-      updateValue(dc - 1);
-    });
-
-
-    let timeoutId;
-    controlContent.addEventListener('input', () => {
-      clearTimeout(timeoutId);
-
-      let text = controlContent.value;
-
-      timeoutId = setTimeout(() => {
-
-        // Xóa tất cả ký tự không phải số
-        let rawValue = text.replace(/\D/g, '');
-
-        if (rawValue === "" || isNaN(rawValue)) {
-          controlContent.value = ""; // Vẫn để trống để hiện placeholder
-          return;
-        }
-
-        updateValue(rawValue);
-
-      }, 1000);
-
-    });
-
-
-    document.getElementById('btnRead').addEventListener('click', () => {
+    async function stopPulseIfOn() {
       if (pxOn) {
-        sendtext("tatpx");
+        await sendtext("tatpx");
         pxOn = false;
+        refreshUI();
       }
-      controlContent.value = "";
+    }
 
-      // Chờ 1.5 giây trước khi gửi lệnh đọc để tránh xung đột với các lệnh khác
-      setTimeout(() => {
-        sendtext('read');
-      }, 1500);
-
+    document.getElementById('btnRead').addEventListener('click', async () => {
+      await stopPulseIfOn();
+      dcInput.value = "";
+      setTimeout(() => sendtext('read'), 1500);
     });
 
-    document.getElementById('btnWrite').addEventListener('click', () => {
-      if (pxOn) {
-        sendtext("tatpx");
-        pxOn = false;
-      }
-
-      controlContent.value = "";
-      sendtext('write ' + dc.toString());
+    document.getElementById('btnWrite').addEventListener('click', async () => {
+      await stopPulseIfOn();
+      updateValue(dcInput.value);
+      sendtext('write ' + dc);
     });
 
-    /* ==================== CMD INPUT ==================== */
+    /* ==================== LỆNH THỦ CÔNG ==================== */
     const cmdInput = document.getElementById('cmdInput');
 
     function sendCmdFromInput() {
       const cmd = cmdInput.value.trim();
-      if (!cmd) return;
+      if (!cmd || !isConnected()) return;
       sendtext(cmd);
       cmdInput.value = '';
     }
-
     document.getElementById('btnCmdSend').addEventListener('click', sendCmdFromInput);
-
-    cmdInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendCmdFromInput();
-      }
+    cmdInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); sendCmdFromInput(); }
     });
 
-
-    let ledOn = false;
-    document.getElementById('btnNhayLed').addEventListener('click', () => {
-      if (!ledOn) {
-        sendtext("led on");
-        ledOn = true;
-      } else {
-        sendtext("led off");
-        ledOn = false;
-      }
+    /* ==================== LED / XUNG ==================== */
+    btnLed.addEventListener('click', async () => {
+      if (await sendtext(ledOn ? "led off" : "led on")) ledOn = !ledOn;
+      refreshUI();
     });
 
-
-    document.getElementById('btnPhatXung').addEventListener('click', () => {
-      if (!pxOn) {
-        sendtext("batpx");
-        pxOn = true;
-      } else {
-        sendtext("tatpx");
-        pxOn = false;
-      }
+    btnPx.addEventListener('click', async () => {
+      if (await sendtext(pxOn ? "tatpx" : "batpx")) pxOn = !pxOn;
+      refreshUI();
     });
-
-
-    /* ==================== OTA ==================== */
-
-    const otaFileInput = document.getElementById('otaFile');
-    const btnOtaStart = document.getElementById('btnOtaStart');
-    const btnOtaOnline = document.getElementById('btnOtaOnline');
 
     /* ==================== CRC32 ==================== */
-    function crc32(buffer) {
-      let crc = 0xFFFFFFFF;
-      const table = new Uint32Array(256);
+    const CRC_TABLE = (() => {
+      const t = new Uint32Array(256);
       for (let i = 0; i < 256; i++) {
         let c = i;
-        for (let j = 0; j < 8; j++) {
-          c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-        }
-        table[i] = c;
+        for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[i] = c;
       }
+      return t;
+    })();
+
+    function crc32(buffer) {
+      let crc = 0xFFFFFFFF;
       const bytes = new Uint8Array(buffer);
-      for (let i = 0; i < bytes.length; i++) {
-        crc = table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
-      }
+      for (let i = 0; i < bytes.length; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
       return (crc ^ 0xFFFFFFFF) >>> 0;
     }
 
-    /* ==================== Hàm OTA chung ==================== */
+    /* ==================== OTA ==================== */
+    const otaBar = document.getElementById('otaBar');
+    const otaText = document.getElementById('otaText');
+
+    function setOtaProgress(pct, text) {
+      otaBar.style.width = pct + '%';
+      otaText.textContent = text;
+    }
+
     async function startOta(arrayBuffer, fileName = "firmware.bin") {
-      if (!txChar) {
-        addLog("Chưa kết nối BLE");
-        return;
-      }
+      if (!txChar) { addLog("Chưa kết nối BLE", 'err'); return; }
 
       const size = arrayBuffer.byteLength;
       const fileCrc = crc32(arrayBuffer);
@@ -749,91 +611,107 @@
       addLog(`Size: ${(size / 1024).toFixed(1)} KB`);
       addLog(`CRC32: 0x${fileCrc.toString(16).toUpperCase()}`);
 
-      // Gửi lệnh begin + CRC
+      busy = true;
+      refreshUI();
+      setOtaProgress(0, 'Đang chuẩn bị...');
+
       await sendtext(`ota begin ${size} ${fileCrc.toString(16)}`);
       await new Promise(r => setTimeout(r, 1200));
-
       addLog("Bắt đầu gửi dữ liệu...");
 
-      // mức tốc độ 1
-      // const CHUNK_SIZE = 200;
-      // const DELAY_MS = 12;
-
-      // Thử mức 2
-      // const CHUNK_SIZE = 320;
-      // const DELAY_MS = 6;
-
-      // Thử mức 3
-      const CHUNK_SIZE = 400;
-      const DELAY_MS = 5;
-
-      let offset = 0;
-      let lastPercent = -1;
+      const CHUNK_SIZE = 400, DELAY_MS = 5;
+      let offset = 0, lastPercent = -1;
 
       try {
         while (offset < size) {
           if (!device?.gatt?.connected) {
-            addLog("Mất kết nối giữa chừng!");
+            addLog("Mất kết nối giữa chừng!", 'err');
+            setOtaProgress(otaBar.style.width.replace('%', ''), 'Lỗi: mất kết nối');
             return;
           }
-
           const end = Math.min(offset + CHUNK_SIZE, size);
-          const chunk = arrayBuffer.slice(offset, end);
-          await txChar.writeValue(new Uint8Array(chunk));
-
+          await txChar.writeValue(new Uint8Array(arrayBuffer.slice(offset, end)));
           offset = end;
-          const percent = Math.floor((offset / size) * 100);
 
+          const percent = Math.floor((offset / size) * 100);
+          setOtaProgress(percent, `Đang nạp ${percent}% (${(offset / 1024).toFixed(0)}/${(size / 1024).toFixed(0)} KB)`);
           if (percent !== lastPercent && (percent % 5 === 0 || percent === 100)) {
             addLog(`Tiến độ: ${percent}%`);
             lastPercent = percent;
           }
-
           await new Promise(r => setTimeout(r, DELAY_MS));
         }
-
-        addLog("Đã gửi xong. Đợi ESP32 kiểm tra CRC và restart...");
+        addLog("Đã gửi xong. Đợi ESP32 kiểm tra CRC và restart...", 'rx');
+        setOtaProgress(100, 'Hoàn tất – chờ ESP32 kiểm tra CRC và restart');
       } catch (err) {
-        addLog("Lỗi: " + err.message);
+        addLog("Lỗi: " + err.message, 'err');
+        setOtaProgress(otaBar.style.width.replace('%', ''), 'Lỗi: ' + err.message);
         try { await sendtext("ota abort"); } catch (e) { }
+      } finally {
+        busy = false;
+        refreshUI();
       }
     }
 
-    /* ==================== OTA Local ==================== */
-    document.getElementById("btnOtaStart").addEventListener("click", async () => {
-      const file = document.getElementById("otaFile").files[0];
-      if (!file) {
-        addLog("Chưa chọn file .bin");
-        return;
-      }
-      const buffer = await file.arrayBuffer();
-      await startOta(buffer, file.name);
+    /* ----- Modal xác nhận ----- */
+    const otaModal = document.getElementById('otaModal');
+    const otaModalBody = document.getElementById('otaModalBody');
+    let pendingOtaBuffer = null, pendingOtaName = '';
+
+    function showOtaConfirm(buffer, fileName) {
+      const size = buffer.byteLength;
+      const crc = crc32(buffer);
+      pendingOtaBuffer = buffer;
+      pendingOtaName = fileName;
+
+      otaModalBody.innerHTML =
+        `Bạn sắp cập nhật firmware cho thiết bị qua BLE.\n\n` +
+        `📄 File: <span class="info">${fileName}</span>\n` +
+        `📦 Kích thước: <span class="info">${(size / 1024).toFixed(1)} KB</span>\n` +
+        `🔑 CRC32: <span class="info">0x${crc.toString(16).toUpperCase()}</span>\n\n` +
+        `<span class="warn">⚠ Không tắt nguồn / rời khỏi trang trong khi đang nạp.</span>`;
+      otaModal.classList.add('show');
+    }
+
+    function closeOtaModal() {
+      otaModal.classList.remove('show');
+      pendingOtaBuffer = null;
+      pendingOtaName = '';
+    }
+
+    document.getElementById('otaCancel').addEventListener('click', () => {
+      addLog('Đã hủy OTA online');
+      closeOtaModal();
     });
 
-    /* ==================== OTA Online (GitHub cố định) ==================== */
-    document.getElementById("btnOtaOnline").addEventListener("click", async () => {
-      // Link raw cố định của bạn
-      const url = "https://raw.githubusercontent.com/tin86pc/dat_DC/main/firmware.bin";
+    document.getElementById('otaConfirm').addEventListener('click', async () => {
+      const buffer = pendingOtaBuffer, name = pendingOtaName;
+      closeOtaModal();
+      if (buffer) await startOta(buffer, name);
+    });
 
+    /* ----- Tải từ GitHub ----- */
+    document.getElementById("btnOtaOnline").addEventListener("click", async () => {
+      if (!txChar) { addLog("Chưa kết nối BLE, không thể OTA online", 'err'); return; }
+
+      const url = "https://raw.githubusercontent.com/tin86pc/dat_DC/main/firmware.bin";
       addLog("Đang tải firmware từ GitHub...");
+      setOtaProgress(0, 'Đang tải firmware...');
 
       try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
         const buffer = await response.arrayBuffer();
-        if (buffer.byteLength < 20000) {
-          throw new Error("File quá nhỏ, có thể không phải firmware");
-        }
+        if (buffer.byteLength < 20000) throw new Error("File quá nhỏ, có thể không phải firmware");
 
-        await startOta(buffer, "firmware.bin (GitHub)");
+        addLog(`Đã tải xong ${(buffer.byteLength / 1024).toFixed(1)} KB. Chờ xác nhận...`);
+        setOtaProgress(0, 'Chờ xác nhận');
+        showOtaConfirm(buffer, "firmware.bin (GitHub)");
       } catch (err) {
-        addLog("Lỗi tải file: " + err.message);
+        addLog("Lỗi tải file: " + err.message, 'err');
+        setOtaProgress(0, 'Lỗi tải file');
       }
     });
-
-
-
   </script>
 </body>
 
